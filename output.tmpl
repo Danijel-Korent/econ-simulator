@@ -1,0 +1,93 @@
+<style>
+	table {
+		border-collapse: collapse;
+	}
+
+	th, td {
+		border: 1px solid black;
+		padding: 4px;
+	}
+	details, summary {
+		cursor: pointer;
+	}
+	summary > * {
+		display:inline;
+	}
+
+	.details {
+		display:inline;
+		width: min-content;
+	}
+
+	
+</style>
+
+<h1>Simulation output</h1>
+<details >
+<summary ><h2 >Summary</h2></summary/>
+<table>
+	<tr>
+		<th>Month</th>
+		<th>Average wallet</th>
+		<th>Food price</th>
+		<th>Gas price</th>
+		<th>Coffee price</th>
+	</tr>
+	{{range $m := .Basic}}
+	<tr>
+		<td>{{$m.Month}}</td>
+		<td>{{$m.AverageWallet}}</td>
+		<td>{{$m.FoodPrice}}</td>
+		<td>{{$m.GasPrice}}</td>
+		<td>{{$m.CoffeePrice}}</td>
+	</tr>
+	{{end}}
+</table>
+</details>
+<details >
+<summary><h2>Detailed info</h2></summary>
+{{range $m := .Detailed}}
+<h3>Month {{$m.Month}}</h3>
+<div class="diplay: flex; flex-direction: row;"> 
+<table class="details"> 
+	<tr>
+		<th>ID</th>
+		<th>Wallet</th>
+		<th>Salary</th>
+		<th>Monthly food</th>
+		<th>Monthly gas</th>
+	</tr>
+	{{range $p := $m.People}} 
+		<tr>
+			<td>{{$p.IdNumber}}</td>
+			<td>{{$p.WalletAmount}}</td>
+			<td>{{$p.Salary}}</td>
+			<td>{{$p.MonthlyFoodIntake}}</td>
+			<td>{{$p.MonthlyGasIntake}}</td>
+		<tr>
+	{{end}}
+</table>
+
+<table class="details" >
+	<tr>
+		<th>Product</th>
+		<th>Price</th>
+		<th>Stock</th>
+		<th>Production</th>
+	</tr>
+	{{range $p := $m.Producers}} 
+		<tr>
+			<td>{{$p.Product}}</td>
+			<td>{{$p.Price}}</td>
+			<td>{{$p.Stock}}</td>
+			<td>{{$p.MonthlyProduction}}</td>
+		<tr>
+	{{end}}
+</table>
+</div>
+
+
+
+{{end}}
+</details>
+
