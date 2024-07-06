@@ -22,6 +22,10 @@ const FOOD_INTAKE_MAX = 60
 const GAS_INTAKE_MIN = 100
 const GAS_INTAKE_MAX = 200
 
+const FOOD_PRODUCTION_COST = 5
+const GAS_PRODUCTION_COST = 5
+const COFFEE_PRODUCTION_COST = 5
+
 const INIT_PRICE = 10
 const MONTHLY_PRODUCTION = 1000
 
@@ -69,10 +73,12 @@ func (p *Person) buyGoods(producers []Producer) {
 }
 
 type Producer struct {
+	BankBalance       float64
 	Product           string
 	Price             float64
 	Stock             int
 	MonthlyProduction int
+	ProductionCost    float64
 }
 
 // Enum equivalent constants
@@ -84,18 +90,24 @@ const (
 
 func (p *Producer) adjustVariables() {
 	if p.Stock == 0 {
-		p.MonthlyProduction = int(math.Round(float64(p.MonthlyProduction) * 1.1))
 		p.Price *= 1.1
 	} else {
-		p.MonthlyProduction = int(math.Round(float64(p.MonthlyProduction) * 0.9))
 		p.Price *= 0.9
 	}
+}
+
+func (p *Producer) produceProducts() {
+	//Cast to int to truncate instead of round to avoid extra production
+	amount := int(p.BankBalance / p.ProductionCost)
+	p.MonthlyProduction = amount
+	p.BankBalance = float64(amount) * p.ProductionCost
 }
 
 func (p *Producer) registerPurchase(amount int) float64 {
 
 	if p.Stock > amount {
 		p.Stock -= amount
+		p.BankBalance += float64(amount) * p.Price
 		return float64(amount) * p.Price
 	} else {
 		amount := float64(p.Stock) * p.Price
@@ -131,9 +143,9 @@ func main() {
 		producers, people = simulationStep(producers, people, month)
 		detailedMonths = append(detailedMonths, fillDetailedMonth(people, producers, month))
 		basicMonths = append(basicMonths, fillBasicMonth(people, producers, month))
-		printSimulationState(month, producers, people)
-
+		printSimulationState(basicMonths[month])
 	}
+
 	err := outputSimulationHTML(basicMonths, detailedMonths)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -144,12 +156,11 @@ func main() {
 }
 
 func simulationStep(producers []Producer, people []Person, month int) ([]Producer, []Person) {
-	for i, p := range producers {
+	for i, _ := range producers {
 		producers[i].adjustVariables()
 		if month != 0 {
-			producers[i].Stock += p.MonthlyProduction
+			producers[i].produceProducts()
 		}
-
 	}
 
 	for i, p := range people {
@@ -194,7 +205,7 @@ func fillDetailedMonth(people []Person, producers []Producer, month int) Detaile
 
 	newProducers := []Producer{}
 	for _, p := range producers {
-		newProducers = append(newProducers, Producer{Product: p.Product, Stock: p.Stock, MonthlyProduction: p.MonthlyProduction, Price: roundFloatToPrecision(p.Price, 2)})
+		newProducers = append(newProducers, Producer{BankBalance: roundFloatToPrecision(p.BankBalance, 2), Product: p.Product, ProductionCost: roundFloatToPrecision(p.ProductionCost, 2), Stock: p.Stock, MonthlyProduction: p.MonthlyProduction, Price: roundFloatToPrecision(p.Price, 2)})
 	}
 
 	return DetailedMonth{Month: month + 1, People: newPeople, Producers: newProducers}
@@ -216,15 +227,8 @@ func fillBasicMonth(people []Person, producers []Producer, month int) BasicMonth
 	}
 }
 
-func printSimulationState(month int, producers []Producer, people []Person) {
-	averageWallet := 0.0
-	for _, person := range people {
-		averageWallet += person.WalletAmount
-	}
-	averageWallet /= float64(len(people))
-
-	output := fmt.Sprintf("Month: %v | Average walletAmount: %v | Food price: %v | Coffee price: %v | Gasoline price: %v", month+1, roundFloatToPrecision(averageWallet, 2), roundFloatToPrecision(producers[FoodIdx].Price, 2), roundFloatToPrecision(producers[CoffeeIdx].Price, 2), roundFloatToPrecision(producers[GasolineIdx].Price, 2))
-
+func printSimulationState(table BasicMonthTable) {
+	output := fmt.Sprintf("Month: %v | Average walletAmount: %v | Food price: %v | Coffee price: %v | Gasoline price: %v", table.Month, table.AverageWallet, table.FoodPrice, table.CoffeePrice, table.GasPrice)
 	fmt.Println(output)
 }
 
@@ -233,7 +237,20 @@ func initProducer(product string) Producer {
 	if INIT_WITH_STOCK {
 		stock = 1000
 	}
-	return Producer{Product: product, Price: 10, Stock: stock, MonthlyProduction: 1000}
+	productionCost := 0.0
+	switch product {
+	case "food":
+		productionCost = FOOD_PRODUCTION_COST
+		break
+	case "gasoline":
+		productionCost = GAS_PRODUCTION_COST
+		break
+	case "coffee":
+		productionCost = COFFEE_PRODUCTION_COST
+		break
+	}
+
+	return Producer{BankBalance: 0, ProductionCost: productionCost, Product: product, Price: 10, Stock: stock}
 }
 
 func initPerson(r *rand.Rand, ID int) Person {

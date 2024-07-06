@@ -51,6 +51,7 @@
 <div class="diplay: flex; flex-direction: row;"> 
 <table class="details"> 
 	<tr>
+		<th>Balance</th>
 		<th>ID</th>
 		<th>Wallet</th>
 		<th>Salary</th>
@@ -70,17 +71,21 @@
 
 <table class="details" >
 	<tr>
+		<th>Balance</th>
 		<th>Product</th>
 		<th>Price</th>
 		<th>Stock</th>
 		<th>Production</th>
+		<th>Cost</th>
 	</tr>
 	{{range $p := $m.Producers}} 
 		<tr>
+			<td>{{$p.BankBalance}}</td>
 			<td>{{$p.Product}}</td>
 			<td>{{$p.Price}}</td>
 			<td>{{$p.Stock}}</td>
 			<td>{{$p.MonthlyProduction}}</td>
+			<td>{{$p.ProductionCost}}</td>
 		<tr>
 	{{end}}
 </table>
