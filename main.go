@@ -143,9 +143,9 @@ func main() {
 		producers, people = simulationStep(producers, people, month)
 		detailedMonths = append(detailedMonths, fillDetailedMonth(people, producers, month))
 		basicMonths = append(basicMonths, fillBasicMonth(people, producers, month))
-		printSimulationState(basicMonths[month])
 	}
 
+	printSimulationState(basicMonths)
 	err := outputSimulationHTML(basicMonths, detailedMonths)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -176,6 +176,7 @@ func simulationStep(producers []Producer, people []Person, month int) ([]Produce
 }
 
 func outputSimulationHTML(months []BasicMonthTable, detailedMonths []DetailedMonth) error {
+
 	template, err := template.ParseFiles("output.tmpl")
 	if err != nil {
 		return err
@@ -227,9 +228,11 @@ func fillBasicMonth(people []Person, producers []Producer, month int) BasicMonth
 	}
 }
 
-func printSimulationState(table BasicMonthTable) {
-	output := fmt.Sprintf("Month: %v | Average walletAmount: %v | Food price: %v | Coffee price: %v | Gasoline price: %v", table.Month, table.AverageWallet, table.FoodPrice, table.CoffeePrice, table.GasPrice)
-	fmt.Println(output)
+func printSimulationState(tables []BasicMonthTable) {
+	for _, table := range tables {
+		output := fmt.Sprintf("Month: %v | Average walletAmount: %v | Food price: %v | Coffee price: %v | Gasoline price: %v", table.Month, table.AverageWallet, table.FoodPrice, table.CoffeePrice, table.GasPrice)
+		fmt.Println(output)
+	}
 }
 
 func initProducer(product string) Producer {
