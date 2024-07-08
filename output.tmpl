@@ -51,7 +51,7 @@
 <div class="diplay: flex; flex-direction: row;"> 
 <table class="details"> 
 	<tr>
-		<th>Balance</th>
+	
 		<th>ID</th>
 		<th>Wallet</th>
 		<th>Salary</th>
@@ -60,6 +60,7 @@
 	</tr>
 	{{range $p := $m.People}} 
 		<tr>
+			
 			<td>{{$p.IdNumber}}</td>
 			<td>{{$p.WalletAmount}}</td>
 			<td>{{$p.Salary}}</td>

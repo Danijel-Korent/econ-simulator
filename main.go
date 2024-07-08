@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
-	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -32,34 +30,16 @@ const MONTHLY_PRODUCTION = 1000
 // Controls if producers start with one month of stock on month 0
 const INIT_WITH_STOCK = true
 
-type BasicMonthTable struct {
-	Month         int
-	AverageWallet float64
-	FoodPrice     float64
-	GasPrice      float64
-	CoffeePrice   float64
-}
-
-type DetailedMonth struct {
-	Month     int
-	People    []Person
-	Producers []Producer
-}
-
-type CombinedMonth struct {
-	Basic    []BasicMonthTable
-	Detailed []DetailedMonth
-}
-
 type Person struct {
 	IdNumber     int
-	WalletAmount float64
-	Salary       float64
+	WalletAmount int
+	Salary       int
 	//You originally specified these as ints, but I'm assuming you don't want people to be able to buy fractional amounts
 	MonthlyFoodIntake int
 	MonthlyGasIntake  int
 }
 
+// Simulates the purchase of goods, adjusting variables on the person and alerting the producer
 func (p *Person) buyGoods(producers []Producer) {
 	foodCost := producers[FoodIdx].registerPurchase(p.MonthlyFoodIntake)
 	gasCost := producers[GasolineIdx].registerPurchase(p.MonthlyGasIntake)
@@ -73,12 +53,12 @@ func (p *Person) buyGoods(producers []Producer) {
 }
 
 type Producer struct {
-	BankBalance       float64
+	BankBalance       int
 	Product           string
-	Price             float64
+	Price             int
 	Stock             int
 	MonthlyProduction int
-	ProductionCost    float64
+	ProductionCost    int
 }
 
 // Enum equivalent constants
@@ -88,35 +68,40 @@ const (
 	CoffeeIdx   int = 2
 )
 
+// Adjusts the price of goods based on the stock
 func (p *Producer) adjustVariables() {
+	newPrice := 0.0
 	if p.Stock == 0 {
-		p.Price *= 1.1
+		newPrice = float64(p.Price) * 1.1
 	} else {
-		p.Price *= 0.9
+		newPrice = float64(p.Price) * 1.1
 	}
+	p.Price = int(newPrice + 0.5)
 }
 
+// Adds as much product to the producer as they have money to make
 func (p *Producer) produceProducts() {
-	//Cast to int to truncate instead of round to avoid extra production
 	amount := int(p.BankBalance / p.ProductionCost)
 	p.MonthlyProduction = amount
-	p.BankBalance = float64(amount) * p.ProductionCost
+	p.BankBalance = amount * p.ProductionCost
 }
 
-func (p *Producer) registerPurchase(amount int) float64 {
+// Returns the amount purchased and subtracts it from the stock, adding to the bank balance.
+func (p *Producer) registerPurchase(amount int) int {
 
 	if p.Stock > amount {
 		p.Stock -= amount
-		p.BankBalance += float64(amount) * p.Price
-		return float64(amount) * p.Price
+		p.BankBalance += amount * p.Price
+		return amount * p.Price
 	} else {
-		amount := float64(p.Stock) * p.Price
+		amount := p.Stock * p.Price
 		p.Stock = 0
 		return amount
 	}
 }
 
-func (p *Producer) getMaxUnits(money float64) int {
+// Returns the maximum number of units one can buy with a certain amount of money
+func (p *Producer) getMaxUnits(money int) int {
 	//Cast instead of rounding to truncate (prevents overspends)
 	amount := int(money / p.Price)
 	if amount > p.Stock {
@@ -155,6 +140,7 @@ func main() {
 
 }
 
+// Steps through one month of the simulation, adjusting variables as needed
 func simulationStep(producers []Producer, people []Person, month int) ([]Producer, []Person) {
 	for i, _ := range producers {
 		producers[i].adjustVariables()
@@ -175,72 +161,13 @@ func simulationStep(producers []Producer, people []Person, month int) ([]Produce
 
 }
 
-func outputSimulationHTML(months []BasicMonthTable, detailedMonths []DetailedMonth) error {
-
-	template, err := template.ParseFiles("output.tmpl")
-	if err != nil {
-		return err
-	}
-
-	file, err := os.Create("output.html")
-	if err != nil {
-		return err
-	}
-
-	combined := CombinedMonth{Basic: months, Detailed: detailedMonths}
-
-	err = template.Execute(file, combined)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func fillDetailedMonth(people []Person, producers []Producer, month int) DetailedMonth {
-	newPeople := []Person{}
-	for _, p := range people {
-		newPeople = append(newPeople, Person{MonthlyFoodIntake: p.MonthlyFoodIntake, MonthlyGasIntake: p.MonthlyGasIntake, Salary: roundFloatToPrecision(p.Salary, 2), WalletAmount: roundFloatToPrecision(p.WalletAmount, 2), IdNumber: p.IdNumber})
-
-	}
-
-	newProducers := []Producer{}
-	for _, p := range producers {
-		newProducers = append(newProducers, Producer{BankBalance: roundFloatToPrecision(p.BankBalance, 2), Product: p.Product, ProductionCost: roundFloatToPrecision(p.ProductionCost, 2), Stock: p.Stock, MonthlyProduction: p.MonthlyProduction, Price: roundFloatToPrecision(p.Price, 2)})
-	}
-
-	return DetailedMonth{Month: month + 1, People: newPeople, Producers: newProducers}
-}
-
-func fillBasicMonth(people []Person, producers []Producer, month int) BasicMonthTable {
-	averageWallet := 0.0
-	for _, person := range people {
-		averageWallet += person.WalletAmount
-	}
-	averageWallet /= float64(len(people))
-
-	return BasicMonthTable{
-		Month:         month + 1,
-		AverageWallet: roundFloatToPrecision(averageWallet, 2),
-		FoodPrice:     roundFloatToPrecision(producers[FoodIdx].Price, 2),
-		GasPrice:      roundFloatToPrecision(producers[GasolineIdx].Price, 2),
-		CoffeePrice:   roundFloatToPrecision(producers[CoffeeIdx].Price, 2),
-	}
-}
-
-func printSimulationState(tables []BasicMonthTable) {
-	for _, table := range tables {
-		output := fmt.Sprintf("Month: %v | Average walletAmount: %v | Food price: %v | Coffee price: %v | Gasoline price: %v", table.Month, table.AverageWallet, table.FoodPrice, table.CoffeePrice, table.GasPrice)
-		fmt.Println(output)
-	}
-}
-
+// Initialises a new producer and returns it
 func initProducer(product string) Producer {
 	stock := 0
 	if INIT_WITH_STOCK {
 		stock = 1000
 	}
-	productionCost := 0.0
+	productionCost := 0
 	switch product {
 	case "food":
 		productionCost = FOOD_PRODUCTION_COST
@@ -256,24 +183,18 @@ func initProducer(product string) Producer {
 	return Producer{BankBalance: 0, ProductionCost: productionCost, Product: product, Price: 10, Stock: stock}
 }
 
+// Creates a new person, generating random variables
 func initPerson(r *rand.Rand, ID int) Person {
 	return Person{
 		IdNumber:          ID,
-		Salary:            randFloatInRange(SALARY_MIN, SALARY_MAX, r),
+		Salary:            randIntInRange(SALARY_MIN, SALARY_MAX, r),
 		MonthlyFoodIntake: randIntInRange(FOOD_INTAKE_MIN, FOOD_INTAKE_MAX, r),
 		MonthlyGasIntake:  randIntInRange(GAS_INTAKE_MIN, GAS_INTAKE_MAX, r),
 	}
 }
 
+// Generates a random integer between min and max
 func randIntInRange(min int, max int, r *rand.Rand) int {
 	return r.Intn(max-min) + min
 
-}
-func randFloatInRange(min float64, max float64, r *rand.Rand) float64 {
-	return min + r.Float64()*(max-min)
-}
-
-func roundFloatToPrecision(value float64, digits uint) float64 {
-	ratio := math.Pow(10, float64(digits))
-	return math.Round(value*ratio) / ratio
 }
