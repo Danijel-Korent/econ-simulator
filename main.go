@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -25,13 +26,13 @@ const GAS_PRODUCTION_COST = 5
 const COFFEE_PRODUCTION_COST = 5
 
 const INIT_PRICE = 10
-const MONTHLY_PRODUCTION = 1000
 
 // Controls if producers start with one month of stock on month 0
 const INIT_WITH_STOCK = true
 
 type Person struct {
 	IdNumber     int
+	Employer     int
 	WalletAmount int
 	Salary       int
 	//You originally specified these as ints, but I'm assuming you don't want people to be able to buy fractional amounts
@@ -52,12 +53,30 @@ func (p *Person) buyGoods(producers []Producer) {
 	p.WalletAmount -= producers[CoffeeIdx].registerPurchase(maxCoffee)
 }
 
+func (p *Person) receiveSalary(producers []Producer) {
+	p.Salary = producers[p.Employer].MonthSalary
+	p.WalletAmount += p.Salary
+}
+
+func (p *Person) checkNewJobs(producers []Producer) {
+	for i, producer := range producers {
+		if float64(producer.MonthSalary)/float64(p.Salary) >= 1.5 && producer.MonthHires < 2 && i != p.Employer {
+			producers[p.Employer].removeEmployee(p)
+			producer.Employees = append(producer.Employees, p)
+		}
+	}
+}
+
 type Producer struct {
 	BankBalance       int
 	Product           string
+	MonthSalary       int
+	MonthHires        int
+	Employees         []*Person
 	Price             int
 	Stock             int
 	MonthlyProduction int
+	MaximumProduction int
 	ProductionCost    int
 }
 
@@ -69,21 +88,46 @@ const (
 )
 
 // Adjusts the price of goods based on the stock
-func (p *Producer) adjustVariables() {
+func (p *Producer) adjustPriceAndProduction() {
 	newPrice := 0.0
 	if p.Stock == 0 {
 		newPrice = float64(p.Price) * 1.1
+		p.MaximumProduction = int(float64(p.MaximumProduction) * 1.1)
 	} else {
-		newPrice = float64(p.Price) * 1.1
+		newPrice = float64(p.Price) * 0.9
+		p.MaximumProduction = int(float64(p.MaximumProduction) * 0.9)
 	}
 	p.Price = int(newPrice + 0.5)
 }
 
+func (p *Producer) calculateSalary() {
+	if len(p.Employees) > 0 {
+		p.MonthSalary = int(float64(p.BankBalance) / float64(len(p.Employees)))
+		return
+	}
+
+	p.MonthSalary = p.BankBalance
+}
+
 // Adds as much product to the producer as they have money to make
 func (p *Producer) produceProducts() {
-	amount := int(p.BankBalance / p.ProductionCost)
+	amount := int(math.Max(float64(p.BankBalance/p.ProductionCost), float64(p.MaximumProduction)))
 	p.MonthlyProduction = amount
 	p.BankBalance = amount * p.ProductionCost
+}
+
+func (p *Producer) removeEmployee(person *Person) {
+	index := -1
+	for i := range p.Employees {
+		if p.Employees[i] == person {
+			index = i
+		}
+	}
+	if index == -1 {
+		return
+	}
+
+	p.Employees = append(p.Employees[:index], p.Employees[index+1:]...)
 }
 
 // Returns the amount purchased and subtracts it from the stock, adding to the bank balance.
@@ -143,14 +187,17 @@ func main() {
 // Steps through one month of the simulation, adjusting variables as needed
 func simulationStep(producers []Producer, people []Person, month int) ([]Producer, []Person) {
 	for i, _ := range producers {
-		producers[i].adjustVariables()
+		producers[i].adjustPriceAndProduction()
 		if month != 0 {
 			producers[i].produceProducts()
 		}
+
+		producers[i].calculateSalary()
 	}
 
-	for i, p := range people {
-		people[i].WalletAmount += p.Salary
+	for i, _ := range people {
+		people[i].receiveSalary(producers)
+		people[i].checkNewJobs(producers)
 		if month == PAYOUT_MONTH {
 			people[i].WalletAmount *= 2
 		}
@@ -187,7 +234,7 @@ func initProducer(product string) Producer {
 func initPerson(r *rand.Rand, ID int) Person {
 	return Person{
 		IdNumber:          ID,
-		Salary:            randIntInRange(SALARY_MIN, SALARY_MAX, r),
+		Salary:            0,
 		MonthlyFoodIntake: randIntInRange(FOOD_INTAKE_MIN, FOOD_INTAKE_MAX, r),
 		MonthlyGasIntake:  randIntInRange(GAS_INTAKE_MIN, GAS_INTAKE_MAX, r),
 	}
@@ -196,5 +243,4 @@ func initPerson(r *rand.Rand, ID int) Person {
 // Generates a random integer between min and max
 func randIntInRange(min int, max int, r *rand.Rand) int {
 	return r.Intn(max-min) + min
-
 }

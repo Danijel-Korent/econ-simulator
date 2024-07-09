@@ -77,6 +77,7 @@
 		<th>Price</th>
 		<th>Stock</th>
 		<th>Production</th>
+		<th>Salary</th>
 		<th>Cost</th>
 	</tr>
 	{{range $p := $m.Producers}} 
@@ -86,6 +87,7 @@
 			<td>{{$p.Price}}</td>
 			<td>{{$p.Stock}}</td>
 			<td>{{$p.MonthlyProduction}}</td>
+			<td>{{$p.MonthSalary}}</td>
 			<td>{{$p.ProductionCost}}</td>
 		<tr>
 	{{end}}

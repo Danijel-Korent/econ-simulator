@@ -27,18 +27,7 @@ type CombinedMonth struct {
 
 // Fills a detailed month struct, which is used for the detailed view in the HTML template
 func fillDetailedMonth(people []Person, producers []Producer, month int) DetailedMonth {
-	newPeople := []Person{}
-	for _, p := range people {
-		newPeople = append(newPeople, Person{MonthlyFoodIntake: p.MonthlyFoodIntake, MonthlyGasIntake: p.MonthlyGasIntake, Salary: p.Salary, WalletAmount: p.WalletAmount, IdNumber: p.IdNumber})
-
-	}
-
-	newProducers := []Producer{}
-	for _, p := range producers {
-		newProducers = append(newProducers, Producer{BankBalance: p.BankBalance, Product: p.Product, ProductionCost: p.ProductionCost, Stock: p.Stock, MonthlyProduction: p.MonthlyProduction, Price: p.Price})
-	}
-
-	return DetailedMonth{Month: month + 1, People: newPeople, Producers: newProducers}
+	return DetailedMonth{Month: month + 1, People: people, Producers: producers}
 }
 
 // Fills a basic month struct, used for the overview in the HTML template
