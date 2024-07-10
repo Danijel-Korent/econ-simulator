@@ -76,3 +76,29 @@ func printSimulationState(tables []BasicMonthTable) {
 		fmt.Println(output)
 	}
 }
+
+// Debug function for verifying HTML output is working correctly
+func printDetailedMonth(months []DetailedMonth) {
+	for _, m := range months {
+		fmt.Printf("Month %v \n", m.Month)
+		fmt.Println("-------------")
+		for _, p := range m.Producers {
+			printProducer(p)
+		}
+
+	}
+
+}
+
+func printProducer(p Producer) {
+	fmt.Printf("Bank balance: %v \n", p.BankBalance)
+	fmt.Printf("Product: %v \n", p.Product)
+	fmt.Printf("MonthSalary: %v \n", p.MonthSalary)
+	fmt.Printf("MonthHires: %v \n", p.MonthHires)
+	fmt.Printf("NumEmployees: %v \n", p.NumEmployees)
+	fmt.Printf("Price: %v \n", p.Price)
+	fmt.Printf("Stock: %v \n", p.Stock)
+	fmt.Printf("MonthlyProduction: %v \n", p.MonthlyProduction)
+	fmt.Printf("MaximumProduction: %v \n", p.MaximumProduction)
+	fmt.Println("")
+}
