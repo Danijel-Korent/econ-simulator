@@ -27,7 +27,13 @@ type CombinedMonth struct {
 
 // Fills a detailed month struct, which is used for the detailed view in the HTML template
 func fillDetailedMonth(people []Person, producers []Producer, month int) DetailedMonth {
-	return DetailedMonth{Month: month + 1, People: people, Producers: producers}
+	newPeople := make([]Person, len(people))
+	newProducers := make([]Producer, len(producers))
+
+	copy(newPeople, people)
+	copy(newProducers, producers)
+
+	return DetailedMonth{Month: month + 1, People: newPeople, Producers: newProducers}
 }
 
 // Fills a basic month struct, used for the overview in the HTML template
@@ -99,6 +105,5 @@ func printProducer(p Producer) {
 	fmt.Printf("Price: %v \n", p.Price)
 	fmt.Printf("Stock: %v \n", p.Stock)
 	fmt.Printf("MonthlyProduction: %v \n", p.MonthlyProduction)
-	fmt.Printf("MaximumProduction: %v \n", p.MaximumProduction)
 	fmt.Println("")
 }

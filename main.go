@@ -19,12 +19,14 @@ const FOOD_INTAKE_MIN = 30
 const FOOD_INTAKE_MAX = 60
 const GAS_INTAKE_MIN = 100
 const GAS_INTAKE_MAX = 200
+const JOB_SWITCH_MULTIPLIER = 1.5
 
 const FOOD_PRODUCTION_COST = 50
 const GAS_PRODUCTION_COST = 50
 const COFFEE_PRODUCTION_COST = 50
 
-const INIT_MAX_PRODUCTION = 1000
+const INIT_SALARY = 10
+const MAX_HIRES_PER_STEP = 2
 const INIT_PRODUCER_BALANCE = 1000
 const INIT_PRICE = 10
 
@@ -54,14 +56,16 @@ func (p *Person) buyGoods(producers []Producer) {
 	p.WalletAmount -= producers[CoffeeIdx].registerPurchase(maxCoffee)
 }
 
+// Get paid by the employer
 func (p *Person) receiveSalary(producers []Producer) {
 	p.Salary = producers[p.Employer].MonthSalary
 	p.WalletAmount += p.Salary
 }
 
+// Look for a new job at a producer if the  salary is JOB_SWITCH_MULTIPLIER higher
 func (p *Person) checkNewJobs(producers []Producer) {
 	for i, producer := range producers {
-		if float64(producer.MonthSalary)/float64(p.Salary) >= 1.5 && i != p.Employer {
+		if float64(producer.MonthSalary)/float64(p.Salary) >= JOB_SWITCH_MULTIPLIER && i != p.Employer {
 			if producers[i].addEmployee(p) {
 				producers[p.Employer].removeEmployee(p)
 				p.Employer = i
@@ -81,7 +85,6 @@ type Producer struct {
 	Price             int
 	Stock             int
 	MonthlyProduction int
-	MaximumProduction int
 	ProductionCost    int
 }
 
@@ -92,34 +95,25 @@ const (
 	CoffeeIdx   int = 2
 )
 
-// Adjusts the price and maximum production of goods based on the stock
-func (p *Producer) adjustPriceAndProduction() {
+// Adjusts the price and salary of employees based on the stock
+func (p *Producer) adjustPriceAndSalary() {
 	newPrice := 0.0
+	newSalary := 0.0
 	if p.Stock == 0 {
 		newPrice = float64(p.Price) * 1.1
-		p.MaximumProduction = int(float64(p.MaximumProduction)*1.1 + 0.5)
+		newSalary = float64(p.MonthSalary) * 1.05
 	} else {
 		newPrice = float64(p.Price) * 0.9
-		p.MaximumProduction = int(float64(p.MaximumProduction)*0.9 + 0.5)
+		newSalary = float64(p.MonthSalary) * 0.95
 	}
 	p.Price = int(newPrice + 0.5)
-}
-
-// Works out the monthly salary based on the remaining money from production
-func (p *Producer) calculateSalary() {
-	if len(p.Employees) > 0 {
-		p.MonthSalary = int(float64(p.BankBalance) / float64(len(p.Employees)))
-		return
-	}
-
+	p.MonthSalary = int(newSalary + 0.5)
 }
 
 // Adds as much product to the producer as they have money to make
 func (p *Producer) produceProducts() {
 	amount := int(float64(p.BankBalance) / float64(p.ProductionCost))
-	if amount > p.MaximumProduction {
-		amount = p.MaximumProduction
-	}
+
 	p.MonthlyProduction = amount
 	p.BankBalance -= amount * p.ProductionCost
 }
@@ -137,7 +131,7 @@ func (p *Producer) removeEmployee(person *Person) {
 
 // Checks if a new employee can be hired. Employs them and returns true if so, returns false otherwise.
 func (p *Producer) addEmployee(person *Person) bool {
-	if p.MonthHires < 2 {
+	if p.MonthHires < MAX_HIRES_PER_STEP {
 		p.Employees = append(p.Employees, person)
 		p.NumEmployees += 1
 		return true
@@ -186,17 +180,19 @@ func main() {
 
 	}
 
-	detailedMonths := []DetailedMonth{}
-	basicMonths := []BasicMonthTable{}
+	detailedMonths := make([]DetailedMonth, MAX_MONTHS)
+	basicMonths := make([]BasicMonthTable, MAX_MONTHS)
 	for month := 0; month < MAX_MONTHS; month++ {
 		producers, people = simulationStep(producers, people, month)
-		detailedMonths = append(detailedMonths, fillDetailedMonth(people, producers, month))
-		basicMonths = append(basicMonths, fillBasicMonth(people, producers, month))
+		detailedMonth := fillDetailedMonth(people, producers, month)
+		basicMonth := fillBasicMonth(people, producers, month)
 
-		printProducer(detailedMonths[month].Producers[0])
+		detailedMonths[month] = detailedMonth
+		basicMonths[month] = basicMonth
 
 		if month == MAX_MONTHS-1 {
 			printSimulationState(basicMonths)
+
 			err := outputSimulationHTML(basicMonths, detailedMonths)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err)
@@ -210,9 +206,8 @@ func main() {
 // Steps through one month of the simulation, adjusting variables as needed
 func simulationStep(producers []Producer, people []Person, month int) ([]Producer, []Person) {
 	for i := range producers {
-		producers[i].adjustPriceAndProduction()
+		producers[i].adjustPriceAndSalary()
 		producers[i].produceProducts()
-		producers[i].calculateSalary()
 	}
 
 	for i := range people {
@@ -246,7 +241,7 @@ func initProducer(product string) Producer {
 		break
 	}
 
-	return Producer{BankBalance: INIT_PRODUCER_BALANCE, ProductionCost: productionCost, Product: product, Price: 10, Stock: stock, MaximumProduction: INIT_MAX_PRODUCTION, Employees: []*Person{}, NumEmployees: 0}
+	return Producer{BankBalance: INIT_PRODUCER_BALANCE, ProductionCost: productionCost, Product: product, Price: INIT_PRICE, Stock: stock, MonthSalary: INIT_SALARY, Employees: []*Person{}, NumEmployees: 0}
 }
 
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
@@ -268,6 +263,7 @@ func randIntInRange(min int, max int, r *rand.Rand) int {
 	return r.Intn(max-min) + min
 }
 
+// Debug function for testing how money enters the simulation
 func calculateTotalMoneyInSimulation(people []Person, producers []Producer) int {
 	total := 0
 	for _, p := range people {
