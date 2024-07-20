@@ -1,13 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"os"
 	"time"
 )
 
-const JSON_FILE_NAME = "config.json"
+const CONFIG_FILE_NAME = "config.json"
 
 type SimConfig struct {
 	MaxMonths   int
@@ -21,29 +22,15 @@ type SimConfig struct {
 	GasIntakeMin        int
 	GasIntakeMax        int
 	JobSwitchMultiplier float64
+
+	InitSalary            int
+	MaxHires              int
+	InitBalance           int
+	InitPrice             int
+	InitMonthlyProduction int
+	InitStock             int
+	InitWithStock         bool
 }
-
-const MAX_MONTHS = 100
-
-// 0 based, payout happens when month = 49 instead of 50
-const PAYOUT_MONTH = 49
-const NUM_PEOPLE = 20
-
-const SALARY_MIN = 1000
-const SALARY_MAX = 10000
-const FOOD_INTAKE_MIN = 30
-const FOOD_INTAKE_MAX = 60
-const GAS_INTAKE_MIN = 100
-const GAS_INTAKE_MAX = 200
-const JOB_SWITCH_MULTIPLIER = 1.5
-
-const INIT_SALARY = 10
-const MAX_HIRES_PER_STEP = 2
-const INIT_PRODUCER_BALANCE = 1000
-const INIT_PRICE = 10
-
-// Controls if producers start with one month of stock on month 0
-const INIT_WITH_STOCK = true
 
 type Person struct {
 	IdNumber     int
@@ -75,10 +62,10 @@ func (p *Person) receiveSalary(producers []Producer) {
 }
 
 // Look for a new job at a producer if the  salary is JOB_SWITCH_MULTIPLIER higher
-func (p *Person) checkNewJobs(producers []Producer) {
+func (p *Person) checkNewJobs(producers []Producer, config SimConfig) {
 	for i, producer := range producers {
-		if float64(producer.MonthSalary)/float64(p.Salary) >= JOB_SWITCH_MULTIPLIER && i != p.Employer {
-			if producers[i].addEmployee(p) {
+		if float64(producer.MonthSalary)/float64(p.Salary) >= config.JobSwitchMultiplier && i != p.Employer {
+			if producers[i].addEmployee(p, config) {
 				producers[p.Employer].removeEmployee(p)
 				p.Employer = i
 				return
@@ -142,8 +129,8 @@ func (p *Producer) removeEmployee(person *Person) {
 }
 
 // Checks if a new employee can be hired. Employs them and returns true if so, returns false otherwise.
-func (p *Producer) addEmployee(person *Person) bool {
-	if p.MonthHires < MAX_HIRES_PER_STEP {
+func (p *Producer) addEmployee(person *Person, config SimConfig) bool {
+	if p.MonthHires < config.MaxHires {
 		p.Employees = append(p.Employees, person)
 		p.NumEmployees += 1
 		return true
@@ -176,15 +163,31 @@ func (p *Producer) getMaxUnits(money int) int {
 }
 
 func main() {
+	_, err := os.Open(CONFIG_FILE_NAME)
+	if os.IsNotExist(err) {
+		err := createConfigIfNotExists()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
+	}
+
+	fileContents, err := os.ReadFile(CONFIG_FILE_NAME)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+	}
+
+	var config SimConfig
+	json.Unmarshal(fileContents, &config)
+
 	r := rand.New(rand.NewSource(time.Now().UnixMilli()))
 	producers := make([]Producer, 3)
-	producers[FoodIdx] = initProducer("food")
-	producers[GasolineIdx] = initProducer("gasoline")
-	producers[CoffeeIdx] = initProducer("coffee")
+	producers[FoodIdx] = initProducer("food", config)
+	producers[GasolineIdx] = initProducer("gasoline", config)
+	producers[CoffeeIdx] = initProducer("coffee", config)
 
 	people := []Person{}
-	for i := 0; i < NUM_PEOPLE; i++ {
-		person := initPerson(r, i)
+	for i := 0; i < config.NumPeople; i++ {
+		person := initPerson(r, i, config)
 
 		producers[person.Employer].NumEmployees += 1
 		producers[person.Employer].Employees = append(producers[person.Employer].Employees, &person)
@@ -192,17 +195,17 @@ func main() {
 
 	}
 
-	detailedMonths := make([]DetailedMonth, MAX_MONTHS)
-	basicMonths := make([]BasicMonthTable, MAX_MONTHS)
-	for month := 0; month < MAX_MONTHS; month++ {
-		producers, people = simulationStep(producers, people, month)
+	detailedMonths := make([]DetailedMonth, config.MaxMonths)
+	basicMonths := make([]BasicMonthTable, config.MaxMonths)
+	for month := 0; month < config.MaxMonths; month++ {
+		producers, people = simulationStep(producers, people, month, config)
 		detailedMonth := fillDetailedMonth(people, producers, month)
 		basicMonth := fillBasicMonth(people, producers, month)
 
 		detailedMonths[month] = detailedMonth
 		basicMonths[month] = basicMonth
 
-		if month == MAX_MONTHS-1 {
+		if month == config.MaxMonths-1 {
 			printSimulationState(basicMonths)
 
 			err := outputSimulationHTML(basicMonths, detailedMonths)
@@ -216,16 +219,16 @@ func main() {
 }
 
 // Steps through one month of the simulation, adjusting variables as needed
-func simulationStep(producers []Producer, people []Person, month int) ([]Producer, []Person) {
+func simulationStep(producers []Producer, people []Person, month int, config SimConfig) ([]Producer, []Person) {
 	for i := range producers {
 		producers[i].adjustVariables()
 		producers[i].produceProducts()
 	}
 
 	for i := range people {
-		people[i].checkNewJobs(producers)
+		people[i].checkNewJobs(producers, config)
 		people[i].receiveSalary(producers)
-		if month == PAYOUT_MONTH {
+		if month == config.PayoutMonth {
 			people[i].WalletAmount *= 2
 		}
 		people[i].buyGoods(producers)
@@ -235,16 +238,16 @@ func simulationStep(producers []Producer, people []Person, month int) ([]Produce
 }
 
 // Initialises a new producer and returns it
-func initProducer(product string) Producer {
+func initProducer(product string, config SimConfig) Producer {
 	stock := 0
-	if INIT_WITH_STOCK {
-		stock = 1000
+	if config.InitWithStock {
+		stock = config.InitStock
 	}
-	return Producer{BankBalance: INIT_PRODUCER_BALANCE, Product: product, Price: INIT_PRICE, Stock: stock, MonthSalary: INIT_SALARY, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: 1000}
+	return Producer{BankBalance: config.InitBalance, Product: product, Price: config.InitPrice, Stock: stock, MonthSalary: config.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: config.InitMonthlyProduction}
 }
 
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
-func initPerson(r *rand.Rand, ID int) Person {
+func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 	randomEmployer := randIntInRange(0, 3, r)
 
 	return Person{
@@ -252,8 +255,8 @@ func initPerson(r *rand.Rand, ID int) Person {
 		Employer:          randomEmployer,
 		WalletAmount:      0,
 		Salary:            0,
-		MonthlyFoodIntake: randIntInRange(FOOD_INTAKE_MIN, FOOD_INTAKE_MAX, r),
-		MonthlyGasIntake:  randIntInRange(GAS_INTAKE_MIN, GAS_INTAKE_MAX, r),
+		MonthlyFoodIntake: randIntInRange(config.FoodIntakeMin, config.FoodIntakeMax, r),
+		MonthlyGasIntake:  randIntInRange(config.GasIntakeMin, config.GasIntakeMax, r),
 	}
 }
 
@@ -273,4 +276,35 @@ func calculateTotalMoneyInSimulation(people []Person, producers []Producer) int 
 	}
 
 	return total
+}
+
+// Outputs a config with sensible defaults, to be used if the config file does not yet exist
+func createConfigIfNotExists() error {
+	file, err := os.Create(CONFIG_FILE_NAME)
+	if err != nil {
+		return err
+	}
+
+	defer file.Close()
+
+	exampleConfig := SimConfig{
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, SalaryMin: 1000, SalaryMax: 10000, FoodIntakeMin: 30, FoodIntakeMax: 60, GasIntakeMin: 100, GasIntakeMax: 200, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000,
+	}
+
+	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(bytes)
+	if err != nil {
+		return err
+	}
+
+	err = file.Sync()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
