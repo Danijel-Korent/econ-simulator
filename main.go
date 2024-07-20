@@ -37,10 +37,6 @@ const GAS_INTAKE_MIN = 100
 const GAS_INTAKE_MAX = 200
 const JOB_SWITCH_MULTIPLIER = 1.5
 
-const FOOD_PRODUCTION_COST = 50
-const GAS_PRODUCTION_COST = 50
-const COFFEE_PRODUCTION_COST = 50
-
 const INIT_SALARY = 10
 const MAX_HIRES_PER_STEP = 2
 const INIT_PRODUCER_BALANCE = 1000
@@ -101,7 +97,6 @@ type Producer struct {
 	Price             int
 	Stock             int
 	MonthlyProduction int
-	ProductionCost    int
 }
 
 // Enum equivalent constants
@@ -112,26 +107,27 @@ const (
 )
 
 // Adjusts the price and salary of employees based on the stock
-func (p *Producer) adjustPriceAndSalary() {
+func (p *Producer) adjustVariables() {
 	newPrice := 0.0
 	newSalary := 0.0
+	newProduction := 0.0
 	if p.Stock == 0 {
+		newProduction = float64(p.MonthlyProduction) * 1.1
 		newPrice = float64(p.Price) * 1.1
 		newSalary = float64(p.MonthSalary) * 1.05
 	} else {
+		newProduction = float64(p.MonthlyProduction) * 0.9
 		newPrice = float64(p.Price) * 0.9
 		newSalary = float64(p.MonthSalary) * 0.95
 	}
+	p.MonthlyProduction = int(newProduction + 0.5)
 	p.Price = int(newPrice + 0.5)
 	p.MonthSalary = int(newSalary + 0.5)
 }
 
 // Adds as much product to the producer as they have money to make
 func (p *Producer) produceProducts() {
-	amount := int(float64(p.BankBalance) / float64(p.ProductionCost))
-
-	p.MonthlyProduction = amount
-	p.BankBalance -= amount * p.ProductionCost
+	p.Stock += p.MonthlyProduction
 }
 
 // Removes the given employee from the producer
@@ -222,7 +218,7 @@ func main() {
 // Steps through one month of the simulation, adjusting variables as needed
 func simulationStep(producers []Producer, people []Person, month int) ([]Producer, []Person) {
 	for i := range producers {
-		producers[i].adjustPriceAndSalary()
+		producers[i].adjustVariables()
 		producers[i].produceProducts()
 	}
 
@@ -244,20 +240,7 @@ func initProducer(product string) Producer {
 	if INIT_WITH_STOCK {
 		stock = 1000
 	}
-	productionCost := 0
-	switch product {
-	case "food":
-		productionCost = FOOD_PRODUCTION_COST
-		break
-	case "gasoline":
-		productionCost = GAS_PRODUCTION_COST
-		break
-	case "coffee":
-		productionCost = COFFEE_PRODUCTION_COST
-		break
-	}
-
-	return Producer{BankBalance: INIT_PRODUCER_BALANCE, ProductionCost: productionCost, Product: product, Price: INIT_PRICE, Stock: stock, MonthSalary: INIT_SALARY, Employees: []*Person{}, NumEmployees: 0}
+	return Producer{BankBalance: INIT_PRODUCER_BALANCE, Product: product, Price: INIT_PRICE, Stock: stock, MonthSalary: INIT_SALARY, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: 1000}
 }
 
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
@@ -287,7 +270,6 @@ func calculateTotalMoneyInSimulation(people []Person, producers []Producer) int 
 	}
 	for _, p := range producers {
 		total += p.BankBalance
-		total += p.Stock * p.ProductionCost
 	}
 
 	return total
