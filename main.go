@@ -7,6 +7,22 @@ import (
 	"time"
 )
 
+const JSON_FILE_NAME = "config.json"
+
+type SimConfig struct {
+	MaxMonths   int
+	PayoutMonth int
+	NumPeople   int
+
+	SalaryMin           int
+	SalaryMax           int
+	FoodIntakeMin       int
+	FoodIntakeMax       int
+	GasIntakeMin        int
+	GasIntakeMax        int
+	JobSwitchMultiplier float64
+}
+
 const MAX_MONTHS = 100
 
 // 0 based, payout happens when month = 49 instead of 50
