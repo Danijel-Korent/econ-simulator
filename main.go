@@ -11,10 +11,12 @@ import (
 const CONFIG_FILE_NAME = "config.json"
 
 type SimConfig struct {
+	//Simulation basics
 	MaxMonths   int
 	PayoutMonth int
 	NumPeople   int
 
+	//Individuals
 	SalaryMin           int
 	SalaryMax           int
 	FoodIntakeMin       int
@@ -23,21 +25,24 @@ type SimConfig struct {
 	GasIntakeMax        int
 	JobSwitchMultiplier float64
 
-	InitSalary            int
-	MaxHires              int
-	InitBalance           int
-	InitPrice             int
-	InitMonthlyProduction int
-	InitStock             int
-	InitWithStock         bool
+	//Producers
+	InitSalary               int
+	MaxHires                 int
+	InitBalance              int
+	InitPrice                int
+	InitMonthlyProduction    int
+	InitStock                int
+	ProductionUnitCostAmount int
+	ProductionCoffeeCost     int
+	ProductionGasCost        int
+	InitWithStock            bool
 }
 
 type Person struct {
-	IdNumber     int
-	Employer     int
-	WalletAmount int
-	Salary       int
-	//You originally specified these as ints, but I'm assuming you don't want people to be able to buy fractional amounts
+	IdNumber          int
+	Employer          int
+	WalletAmount      int
+	Salary            int
 	MonthlyFoodIntake int
 	MonthlyGasIntake  int
 }
@@ -75,14 +80,16 @@ func (p *Person) checkNewJobs(producers []Producer, config SimConfig) {
 }
 
 type Producer struct {
-	BankBalance       int
-	Product           string
-	MonthSalary       int
-	MonthHires        int
-	Employees         []*Person
-	NumEmployees      int
-	Price             int
-	Stock             int
+	BankBalance  int
+	Product      string
+	MonthSalary  int
+	MonthHires   int
+	Employees    []*Person
+	NumEmployees int
+	Price        int
+	Stock        int
+	//Number of units since the producer last bought necessary materials (gas and coffee)
+	UnpaidUnits       int
 	MonthlyProduction int
 }
 
@@ -288,7 +295,7 @@ func createConfigIfNotExists() error {
 	defer file.Close()
 
 	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, SalaryMin: 1000, SalaryMax: 10000, FoodIntakeMin: 30, FoodIntakeMax: 60, GasIntakeMin: 100, GasIntakeMax: 200, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000,
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, SalaryMin: 1000, SalaryMax: 10000, FoodIntakeMin: 30, FoodIntakeMax: 60, GasIntakeMin: 100, GasIntakeMax: 200, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1,
 	}
 
 	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
