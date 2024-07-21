@@ -170,21 +170,10 @@ func (p *Producer) getMaxUnits(money int) int {
 }
 
 func main() {
-	_, err := os.Open(CONFIG_FILE_NAME)
-	if os.IsNotExist(err) {
-		err := createConfigIfNotExists()
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-		}
-	}
-
-	fileContents, err := os.ReadFile(CONFIG_FILE_NAME)
+	config, err := loadConfig()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
-
-	var config SimConfig
-	json.Unmarshal(fileContents, &config)
 
 	r := rand.New(rand.NewSource(time.Now().UnixMilli()))
 	producers := make([]Producer, 3)
@@ -223,6 +212,26 @@ func main() {
 	}
 
 	fmt.Println("Simulation exiting")
+}
+
+func loadConfig() (SimConfig, error) {
+	_, err := os.Open(CONFIG_FILE_NAME)
+	if os.IsNotExist(err) {
+		err := createConfigIfNotExists()
+		if err != nil {
+			return SimConfig{}, err
+		}
+	}
+
+	fileContents, err := os.ReadFile(CONFIG_FILE_NAME)
+	if err != nil {
+		return SimConfig{}, err
+	}
+
+	var config SimConfig
+	json.Unmarshal(fileContents, &config)
+
+	return config, nil
 }
 
 // Steps through one month of the simulation, adjusting variables as needed
