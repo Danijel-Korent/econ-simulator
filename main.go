@@ -122,6 +122,15 @@ func (p *Producer) adjustVariables() {
 // Adds as much product to the producer as they have money to make
 func (p *Producer) produceProducts() {
 	p.Stock += p.MonthlyProduction
+	p.UnpaidUnits += p.MonthlyProduction
+}
+
+func (p *Producer) payProductionCost(producers []Producer, config SimConfig) {
+	purchases := int(float64(p.UnpaidUnits) / float64(config.ProductionUnitCostAmount))
+	p.BankBalance -= producers[GasolineIdx].registerPurchase(purchases * config.ProductionGasCost)
+	p.BankBalance -= producers[CoffeeIdx].registerPurchase(purchases * config.ProductionCoffeeCost)
+
+	p.UnpaidUnits -= purchases * config.ProductionUnitCostAmount
 }
 
 // Removes the given employee from the producer
@@ -238,6 +247,7 @@ func loadConfig() (SimConfig, error) {
 func simulationStep(producers []Producer, people []Person, month int, config SimConfig) ([]Producer, []Person) {
 	for i := range producers {
 		producers[i].adjustVariables()
+		producers[i].payProductionCost(producers, config)
 		producers[i].produceProducts()
 	}
 
