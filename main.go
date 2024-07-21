@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"math/rand"
 	"os"
 	"time"
@@ -17,13 +18,14 @@ type SimConfig struct {
 	NumPeople   int
 
 	//Individuals
-	SalaryMin           int
-	SalaryMax           int
-	FoodIntakeMin       int
-	FoodIntakeMax       int
-	GasIntakeMin        int
-	GasIntakeMax        int
-	JobSwitchMultiplier float64
+	SalaryMin                 int
+	SalaryMax                 int
+	FoodIntakeMin             int
+	FoodIntakeMax             int
+	GasIntakeMin              int
+	GasIntakeMax              int
+	GasConsumptionPerDistance int
+	JobSwitchMultiplier       float64
 
 	//Producers
 	InitSalary               int
@@ -36,6 +38,9 @@ type SimConfig struct {
 	ProductionCoffeeCost     int
 	ProductionGasCost        int
 	InitWithStock            bool
+
+	PositionMin int
+	PositionMax int
 }
 
 type Person struct {
@@ -45,6 +50,8 @@ type Person struct {
 	Salary            int
 	MonthlyFoodIntake int
 	MonthlyGasIntake  int
+	PosX              int
+	PosY              int
 }
 
 // Simulates the purchase of goods, adjusting variables on the person and alerting the producer
@@ -79,6 +86,12 @@ func (p *Person) checkNewJobs(producers []Producer, config SimConfig) {
 	}
 }
 
+func (p *Person) calculateGasConsumption(producers []Producer, config SimConfig) {
+	employer := producers[p.Employer]
+	p.MonthlyGasIntake = pythagDistance(p.PosX, p.PosY, employer.PosX, employer.PosY) * config.GasConsumptionPerDistance
+	fmt.Printf("Employer at: (%v, %v), Person at: (%v, %v). %v distance to employer \n", employer.PosX, employer.PosY, p.PosX, p.PosY, pythagDistance(p.PosX, p.PosY, employer.PosX, employer.PosY))
+}
+
 type Producer struct {
 	BankBalance  int
 	Product      string
@@ -91,6 +104,8 @@ type Producer struct {
 	//Number of units since the producer last bought necessary materials (gas and coffee)
 	UnpaidUnits       int
 	MonthlyProduction int
+	PosX              int
+	PosY              int
 }
 
 // Enum equivalent constants
@@ -186,9 +201,9 @@ func main() {
 
 	r := rand.New(rand.NewSource(time.Now().UnixMilli()))
 	producers := make([]Producer, 3)
-	producers[FoodIdx] = initProducer("food", config)
-	producers[GasolineIdx] = initProducer("gasoline", config)
-	producers[CoffeeIdx] = initProducer("coffee", config)
+	producers[FoodIdx] = initProducer("food", config, r)
+	producers[GasolineIdx] = initProducer("gasoline", config, r)
+	producers[CoffeeIdx] = initProducer("coffee", config, r)
 
 	people := []Person{}
 	for i := 0; i < config.NumPeople; i++ {
@@ -253,6 +268,7 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 
 	for i := range people {
 		people[i].checkNewJobs(producers, config)
+		people[i].calculateGasConsumption(producers, config)
 		people[i].receiveSalary(producers)
 		if month == config.PayoutMonth {
 			people[i].WalletAmount *= 2
@@ -264,12 +280,12 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 }
 
 // Initialises a new producer and returns it
-func initProducer(product string, config SimConfig) Producer {
+func initProducer(product string, config SimConfig, r *rand.Rand) Producer {
 	stock := 0
 	if config.InitWithStock {
 		stock = config.InitStock
 	}
-	return Producer{BankBalance: config.InitBalance, Product: product, Price: config.InitPrice, Stock: stock, MonthSalary: config.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: config.InitMonthlyProduction}
+	return Producer{BankBalance: config.InitBalance, Product: product, Price: config.InitPrice, Stock: stock, MonthSalary: config.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: config.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r)}
 }
 
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
@@ -282,7 +298,8 @@ func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 		WalletAmount:      0,
 		Salary:            0,
 		MonthlyFoodIntake: randIntInRange(config.FoodIntakeMin, config.FoodIntakeMax, r),
-		MonthlyGasIntake:  randIntInRange(config.GasIntakeMin, config.GasIntakeMax, r),
+		PosX:              randIntInRange(config.PositionMin, config.PositionMax, r),
+		PosY:              randIntInRange(config.PositionMin, config.PositionMax, r),
 	}
 }
 
@@ -314,7 +331,7 @@ func createConfigIfNotExists() error {
 	defer file.Close()
 
 	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, SalaryMin: 1000, SalaryMax: 10000, FoodIntakeMin: 30, FoodIntakeMax: 60, GasIntakeMin: 100, GasIntakeMax: 200, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1,
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, SalaryMin: 1000, SalaryMax: 10000, FoodIntakeMin: 30, FoodIntakeMax: 60, GasIntakeMin: 100, GasIntakeMax: 200, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1, PositionMin: 0, PositionMax: 1000, GasConsumptionPerDistance: 1,
 	}
 
 	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
@@ -333,4 +350,11 @@ func createConfigIfNotExists() error {
 	}
 
 	return nil
+}
+
+// Calculates the straight line distance between two points
+func pythagDistance(x1 int, y1 int, x2 int, y2 int) int {
+	distanceX := math.Abs(float64(x2 - x1))
+	distanceY := math.Abs(float64(y2 - y1))
+	return int(math.Sqrt(math.Pow(distanceX, 2) + math.Pow(distanceY, 2)))
 }

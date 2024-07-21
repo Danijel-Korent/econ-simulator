@@ -8,6 +8,7 @@
 	"FoodIntakeMax": 60,
 	"GasIntakeMin": 100,
 	"GasIntakeMax": 200,
+	"GasConsumptionPerDistance": 1,
 	"JobSwitchMultiplier": 1.5,
 	"InitSalary": 10,
 	"MaxHires": 2,
@@ -15,5 +16,10 @@
 	"InitPrice": 10,
 	"InitMonthlyProduction": 1000,
 	"InitStock": 1000,
-	"InitWithStock": true
+	"ProductionUnitCostAmount": 10,
+	"ProductionCoffeeCost": 1,
+	"ProductionGasCost": 1,
+	"InitWithStock": true,
+	"PositionMin": 0,
+	"PositionMax": 300 
 }
