@@ -52,15 +52,26 @@ type Person struct {
 
 // Simulates the purchase of goods, adjusting variables on the person and alerting the producer
 func (p *Person) buyGoods(producers []Producer) {
-	foodCost := producers[FoodIdx].registerPurchase(p.MonthlyFoodIntake)
-	gasCost := producers[GasolineIdx].registerPurchase(p.MonthlyGasIntake)
-	p.WalletAmount -= (foodCost + gasCost)
+	foodCost := producers[FoodIdx].registerPurchase(p.getUnitsToPurchase(producers[FoodIdx], p.MonthlyFoodIntake))
+	p.WalletAmount -= foodCost
+	gasCost := producers[GasolineIdx].registerPurchase(p.getUnitsToPurchase(producers[GasolineIdx], p.MonthlyGasIntake))
+	p.WalletAmount -= gasCost
 	if p.WalletAmount > foodCost {
+		fmt.Println("Buying additional food")
 		p.WalletAmount -= producers[FoodIdx].registerPurchase(p.MonthlyFoodIntake)
 	}
 
 	maxCoffee := producers[CoffeeIdx].getMaxUnits(p.WalletAmount)
 	p.WalletAmount -= producers[CoffeeIdx].registerPurchase(maxCoffee)
+}
+
+// Returns either the desired number of units to purchase by the individual or the maximum amount they can purchase with their wallet amount
+func (p *Person) getUnitsToPurchase(producer Producer, desiredIntake int) int {
+	if p.WalletAmount >= producer.Price*desiredIntake {
+		return desiredIntake
+	} else {
+		return producer.getMaxUnits(p.WalletAmount)
+	}
 }
 
 // Get paid by the employer
@@ -286,7 +297,6 @@ func initProducer(product string, config SimConfig, r *rand.Rand) Producer {
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
 func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 	randomEmployer := randIntInRange(0, 3, r)
-	fmt.Println(randomEmployer)
 
 	return Person{
 		IdNumber:          ID,
