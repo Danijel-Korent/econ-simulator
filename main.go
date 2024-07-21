@@ -89,7 +89,6 @@ func (p *Person) checkNewJobs(producers []Producer, config SimConfig) {
 func (p *Person) calculateGasConsumption(producers []Producer, config SimConfig) {
 	employer := producers[p.Employer]
 	p.MonthlyGasIntake = pythagDistance(p.PosX, p.PosY, employer.PosX, employer.PosY) * config.GasConsumptionPerDistance
-	fmt.Printf("Employer at: (%v, %v), Person at: (%v, %v). %v distance to employer \n", employer.PosX, employer.PosY, p.PosX, p.PosY, pythagDistance(p.PosX, p.PosY, employer.PosX, employer.PosY))
 }
 
 type Producer struct {
@@ -291,6 +290,7 @@ func initProducer(product string, config SimConfig, r *rand.Rand) Producer {
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
 func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 	randomEmployer := randIntInRange(0, 3, r)
+	fmt.Println(randomEmployer)
 
 	return Person{
 		IdNumber:          ID,
