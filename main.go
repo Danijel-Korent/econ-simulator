@@ -331,7 +331,7 @@ func createConfigIfNotExists() error {
 	defer file.Close()
 
 	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, SalaryMin: 1000, SalaryMax: 10000, FoodIntakeMin: 30, FoodIntakeMax: 60, GasIntakeMin: 100, GasIntakeMax: 200, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1, PositionMin: 0, PositionMax: 1000, GasConsumptionPerDistance: 1,
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, SalaryMin: 1000, SalaryMax: 10000, FoodIntakeMin: 30, FoodIntakeMax: 60, GasIntakeMin: 100, GasIntakeMax: 200, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1,
 	}
 
 	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
