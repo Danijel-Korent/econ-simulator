@@ -2,6 +2,8 @@
 	"MaxMonths": 100,
 	"PayoutMonth": 49,
 	"NumPeople": 20,
+	"StartingWalletMin": 0,
+	"StartingWalletMax": 1000,
 	"FoodIntakeMin": 30,
 	"FoodIntakeMax": 60,
 	"GasConsumptionPerDistance": 1,
@@ -17,5 +19,5 @@
 	"ProductionGasCost": 1,
 	"InitWithStock": true,
 	"PositionMin": 0,
-	"PositionMax": 300 
+	"PositionMax": 300
 }

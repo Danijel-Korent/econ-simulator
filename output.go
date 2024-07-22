@@ -12,6 +12,7 @@ type BasicMonthTable struct {
 	FoodPrice     int
 	GasPrice      int
 	CoffeePrice   int
+	TotalMoney    int
 }
 
 type DetailedMonth struct {
@@ -50,6 +51,7 @@ func fillBasicMonth(people []Person, producers []Producer, month int) BasicMonth
 		FoodPrice:     producers[FoodIdx].Price,
 		GasPrice:      producers[GasolineIdx].Price,
 		CoffeePrice:   producers[CoffeeIdx].Price,
+		TotalMoney:    calculateTotalMoneyInSimulation(people, producers),
 	}
 }
 
@@ -78,7 +80,7 @@ func outputSimulationHTML(months []BasicMonthTable, detailedMonths []DetailedMon
 // Prints the simulation state using the basic month table
 func printSimulationState(tables []BasicMonthTable) {
 	for _, table := range tables {
-		output := fmt.Sprintf("Month: %v | Average walletAmount: %v | Food price: %v | Coffee price: %v | Gasoline price: %v", table.Month, table.AverageWallet, table.FoodPrice, table.CoffeePrice, table.GasPrice)
+		output := fmt.Sprintf("Month: %v | Average walletAmount: %v | Food price: %v | Coffee price: %v | Gasoline price: %v | Total money: %v", table.Month, table.AverageWallet, table.FoodPrice, table.CoffeePrice, table.GasPrice, table.TotalMoney)
 		fmt.Println(output)
 	}
 }

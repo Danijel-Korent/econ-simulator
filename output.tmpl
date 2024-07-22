@@ -32,6 +32,7 @@
 		<th>Food price</th>
 		<th>Gas price</th>
 		<th>Coffee price</th>
+		<th>Total money</th>
 	</tr>
 	{{range $m := .Basic}}
 	<tr>
@@ -40,6 +41,7 @@
 		<td>{{$m.FoodPrice}}</td>
 		<td>{{$m.GasPrice}}</td>
 		<td>{{$m.CoffeePrice}}</td>
+		<td>{{$m.TotalMoney}}</td>
 	</tr>
 	{{end}}
 </table>

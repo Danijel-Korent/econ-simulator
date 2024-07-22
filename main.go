@@ -18,6 +18,8 @@ type SimConfig struct {
 	NumPeople   int
 
 	//Individuals
+	StartingWalletMin         int
+	StartingWalletMax         int
 	FoodIntakeMin             int
 	FoodIntakeMax             int
 	GasConsumptionPerDistance int
@@ -221,17 +223,22 @@ func main() {
 
 	}
 
-	detailedMonths := make([]DetailedMonth, config.MaxMonths)
-	basicMonths := make([]BasicMonthTable, config.MaxMonths)
+	detailedMonths := make([]DetailedMonth, config.MaxMonths+1)
+	basicMonths := make([]BasicMonthTable, config.MaxMonths+1)
 	for month := 0; month < config.MaxMonths; month++ {
-		producers, people = simulationStep(producers, people, month, config)
 		detailedMonth := fillDetailedMonth(people, producers, month)
 		basicMonth := fillBasicMonth(people, producers, month)
-
 		detailedMonths[month] = detailedMonth
 		basicMonths[month] = basicMonth
 
+		producers, people = simulationStep(producers, people, month, config)
+
 		if month == config.MaxMonths-1 {
+			detailedMonth := fillDetailedMonth(people, producers, month)
+			basicMonth := fillBasicMonth(people, producers, month)
+			detailedMonths[month+1] = detailedMonth
+			basicMonths[month+1] = basicMonth
+
 			printSimulationState(basicMonths)
 
 			err := outputSimulationHTML(basicMonths, detailedMonths)
@@ -301,7 +308,7 @@ func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 	return Person{
 		IdNumber:          ID,
 		Employer:          randomEmployer,
-		WalletAmount:      0,
+		WalletAmount:      randIntInRange(config.StartingWalletMin, config.StartingWalletMax, r),
 		Salary:            0,
 		MonthlyFoodIntake: randIntInRange(config.FoodIntakeMin, config.FoodIntakeMax, r),
 		PosX:              randIntInRange(config.PositionMin, config.PositionMax, r),
@@ -337,7 +344,7 @@ func createConfigIfNotExists() error {
 	defer file.Close()
 
 	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1,
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000,
 	}
 
 	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
