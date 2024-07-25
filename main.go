@@ -177,6 +177,7 @@ func (p *Producer) addEmployee(person *Person, config SimConfig) bool {
 	if p.MonthHires < config.MaxHires {
 		p.Employees = append(p.Employees, person)
 		p.NumEmployees += 1
+		p.MonthHires += 1
 		return true
 	}
 
@@ -279,6 +280,7 @@ func loadConfig() (SimConfig, error) {
 // Steps through one month of the simulation, adjusting variables as needed
 func simulationStep(producers []Producer, people []Person, month int, config SimConfig) ([]Producer, []Person) {
 	for i := range producers {
+		producers[i].MonthHires = 0
 		producers[i].adjustVariables()
 		producers[i].payProductionCost(producers, config)
 		producers[i].produceProducts()
