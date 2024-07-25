@@ -89,16 +89,19 @@ type Person struct {
 
 // Simulates the purchase of goods, adjusting variables on the person and alerting the producer
 func (p *Person) buyGoods(producers []Producer) {
-	foodCost := producers[FoodIdx].registerPurchase(p.getUnitsToPurchase(producers[FoodIdx], p.MonthlyFoodIntake))
+	foodProducerIdx := findProducerIdx("food", producers)
+	gasProducerIdx := findProducerIdx("gasoline", producers)
+	coffeeProducerIdx := findProducerIdx("coffee", producers)
+	foodCost := producers[foodProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[foodProducerIdx], p.MonthlyFoodIntake))
 	p.WalletAmount -= foodCost
-	gasCost := producers[GasolineIdx].registerPurchase(p.getUnitsToPurchase(producers[GasolineIdx], p.MonthlyGasIntake))
+	gasCost := producers[gasProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake))
 	p.WalletAmount -= gasCost
 	if p.WalletAmount > foodCost {
-		p.WalletAmount -= producers[FoodIdx].registerPurchase(p.MonthlyFoodIntake)
+		p.WalletAmount -= producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
 	}
 
-	maxCoffee := producers[CoffeeIdx].getMaxUnits(p.WalletAmount)
-	p.WalletAmount -= producers[CoffeeIdx].registerPurchase(maxCoffee)
+	maxCoffee := producers[coffeeProducerIdx].getMaxUnits(p.WalletAmount)
+	p.WalletAmount -= producers[coffeeProducerIdx].registerPurchase(maxCoffee)
 }
 
 // Returns either the desired number of units to purchase by the individual or the maximum amount they can purchase with their wallet amount
@@ -134,23 +137,16 @@ func (p *Person) calculateGasConsumption(producers []Producer, config SimConfig)
 	p.MonthlyGasIntake = pythagDistance(p.PosX, p.PosY, employer.PosX, employer.PosY) * config.GasConsumptionPerDistance
 }
 
-// Enum equivalent constants
-const (
-	FoodIdx     int = 0
-	GasolineIdx int = 1
-	CoffeeIdx   int = 2
-)
-
 // Adjusts the price and salary of employees based on the stock
 func (p *Producer) adjustVariables() {
 	newPrice := 0.0
 	newProduction := 0.0
 	if p.Stock == 0 {
-		newProduction = float64(p.MonthlyProduction) * (1 + p.ProductionChangeAmount)
-		newPrice = float64(p.Price) * (1 + p.PriceChangeAmount)
+		newProduction = float64(p.MonthlyProduction) * (1.0 + p.ProductionChangeAmount)
+		newPrice = float64(p.Price) * (1.0 + p.PriceChangeAmount)
 	} else {
-		newProduction = float64(p.MonthlyProduction) * (1 - p.ProductionChangeAmount)
-		newPrice = float64(p.Price) * (1 - p.PriceChangeAmount)
+		newProduction = float64(p.MonthlyProduction) * (1.0 - p.ProductionChangeAmount)
+		newPrice = float64(p.Price) * (1.0 - p.PriceChangeAmount)
 	}
 	p.MonthlyProduction = int(newProduction + 0.5)
 	p.Price = int(newPrice + 0.5)
@@ -162,7 +158,7 @@ func (p *Producer) produceProducts() {
 	p.UnpaidUnits += p.MonthlyProduction
 }
 
-func (p *Producer) payProductionCost(producers []Producer, config SimConfig) {
+func (p *Producer) payProductionCost(producers []Producer) {
 	for _, cost := range p.ProductionCosts {
 		purchases := int(float64(p.UnpaidUnits) / float64(cost.PerUnits))
 		p.BankBalance -= findProducerIdx(cost.ProducerName, producers)
@@ -310,7 +306,7 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 	for i := range producers {
 		producers[i].MonthHires = 0
 		producers[i].adjustVariables()
-		producers[i].payProductionCost(producers, config)
+		producers[i].payProductionCost(producers)
 		producers[i].calculateSalary()
 		producers[i].produceProducts()
 	}
@@ -330,12 +326,13 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 
 // Initialises a new producer and returns it
 func initProducer(config SimConfig, pConfig ProducerConfig, r *rand.Rand) Producer {
-	return Producer{BankBalance: pConfig.InitBalance, Product: pConfig.ProductName, Price: pConfig.InitPrice, Stock: pConfig.InitStock, MonthSalary: pConfig.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: pConfig.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r)}
+
+	return Producer{BankBalance: pConfig.InitBalance, Product: pConfig.ProductName, Price: pConfig.InitPrice, MaxHires: pConfig.MaxHires, Stock: pConfig.InitStock, MonthSalary: pConfig.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: pConfig.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r), ProductionChangeAmount: pConfig.ProductionChangeAmount, PriceChangeAmount: pConfig.PriceChangeAmount, ProductionCosts: pConfig.ProductionCosts, UnpaidUnits: 0}
 }
 
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
 func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
-	randomEmployer := randIntInRange(0, 3, r)
+	randomEmployer := randIntInRange(0, len(config.Producers), r)
 
 	return Person{
 		IdNumber:          ID,
@@ -375,8 +372,53 @@ func createConfigIfNotExists() error {
 
 	defer file.Close()
 
+	defaultProducers := []ProducerConfig{
+		{
+			ProductName:           "food",
+			InitSalary:            10,
+			MaxHires:              2,
+			InitBalance:           0,
+			InitPrice:             10,
+			InitMonthlyProduction: 100,
+			InitStock:             1000,
+
+			ProductionChangeAmount: 0.1,
+			PriceChangeAmount:      0.1,
+
+			ProductionCosts: []ProductionCost{},
+		},
+		{
+			ProductName:           "gasoline",
+			InitSalary:            10,
+			MaxHires:              2,
+			InitBalance:           0,
+			InitPrice:             10,
+			InitMonthlyProduction: 100,
+			InitStock:             1000,
+
+			ProductionChangeAmount: 0.1,
+			PriceChangeAmount:      0.1,
+
+			ProductionCosts: []ProductionCost{},
+		},
+		{
+			ProductName:           "coffee",
+			InitSalary:            10,
+			MaxHires:              2,
+			InitBalance:           0,
+			InitPrice:             10,
+			InitMonthlyProduction: 100,
+			InitStock:             1000,
+
+			ProductionChangeAmount: 0.1,
+			PriceChangeAmount:      0.1,
+
+			ProductionCosts: []ProductionCost{},
+		},
+	}
+
 	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000,
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000, Producers: defaultProducers,
 	}
 
 	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")

@@ -48,9 +48,9 @@ func fillBasicMonth(people []Person, producers []Producer, month int) BasicMonth
 	return BasicMonthTable{
 		Month:         month + 1,
 		AverageWallet: averageWallet,
-		FoodPrice:     producers[FoodIdx].Price,
-		GasPrice:      producers[GasolineIdx].Price,
-		CoffeePrice:   producers[CoffeeIdx].Price,
+		FoodPrice:     producers[findProducerIdx("food", producers)].Price,
+		GasPrice:      producers[findProducerIdx("gasoline", producers)].Price,
+		CoffeePrice:   producers[findProducerIdx("coffee", producers)].Price,
 		TotalMoney:    calculateTotalMoneyInSimulation(people, producers),
 	}
 }

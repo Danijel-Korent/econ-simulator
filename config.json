@@ -8,19 +8,44 @@
 	"FoodIntakeMax": 60,
 	"GasConsumptionPerDistance": 1,
 	"JobSwitchMultiplier": 1.5,
-	"InitSalary": 10,
-	"MaxHires": 2,
-	"InitBalance": 1000,
-	"InitPrice": 10,
-	"InitMonthlyProduction": 1000,
-	"InitStock": 1000,
-	"ProductionUnitCostAmount": 10,
-	"ProductionCoffeeCost": 1,
-	"ProductionGasCost": 1,
-	"InitWithStock": true,
-	"ProductionChangeAmount": 0.1,
-	"PriceChangeAmount": 0.1,
-	"Producers": null,
+	"Producers": [
+		{
+			"ProductName": "food",
+			"InitSalary": 10,
+			"MaxHires": 2,
+			"InitBalance": 0,
+			"InitPrice": 10,
+			"InitMonthlyProduction": 100,
+			"InitStock": 1000,
+			"ProductionChangeAmount": 0.1,
+			"PriceChangeAmount": 0.1,
+			"ProductionCosts": []
+		},
+		{
+			"ProductName": "gasoline",
+			"InitSalary": 10,
+			"MaxHires": 2,
+			"InitBalance": 0,
+			"InitPrice": 10,
+			"InitMonthlyProduction": 100,
+			"InitStock": 1000,
+			"ProductionChangeAmount": 0.1,
+			"PriceChangeAmount": 0.1,
+			"ProductionCosts": []
+		},
+		{
+			"ProductName": "coffee",
+			"InitSalary": 10,
+			"MaxHires": 2,
+			"InitBalance": 0,
+			"InitPrice": 10,
+			"InitMonthlyProduction": 100,
+			"InitStock": 1000,
+			"ProductionChangeAmount": 0.1,
+			"PriceChangeAmount": 0.1,
+			"ProductionCosts": []
+		}
+	],
 	"PositionMin": 0,
 	"PositionMax": 300
 }
