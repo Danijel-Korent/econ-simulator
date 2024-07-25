@@ -37,6 +37,12 @@ type SimConfig struct {
 	ProductionGasCost        int
 	InitWithStock            bool
 
+	//These variables define the amount above or below one that these variables will change. e.g. a value of 0.05 means that increases will be 1.05 and decreases will be 0.95
+	ProductionChangeAmount float64
+	PriceChangeAmount      float64
+
+	Producers []Producer
+
 	PositionMin int
 	PositionMax int
 }
@@ -129,17 +135,17 @@ const (
 )
 
 // Adjusts the price and salary of employees based on the stock
-func (p *Producer) adjustVariables() {
+func (p *Producer) adjustVariables(config SimConfig) {
 	newPrice := 0.0
 	newSalary := 0.0
 	newProduction := 0.0
 	if p.Stock == 0 {
-		newProduction = float64(p.MonthlyProduction) * 1.1
-		newPrice = float64(p.Price) * 1.1
+		newProduction = float64(p.MonthlyProduction) * (1 + config.ProductionChangeAmount)
+		newPrice = float64(p.Price) * (1 + config.PriceChangeAmount)
 		newSalary = float64(p.MonthSalary) * 1.05
 	} else {
-		newProduction = float64(p.MonthlyProduction) * 0.9
-		newPrice = float64(p.Price) * 0.9
+		newProduction = float64(p.MonthlyProduction) * (1 - config.ProductionChangeAmount)
+		newPrice = float64(p.Price) * (1 - config.PriceChangeAmount)
 		newSalary = float64(p.MonthSalary) * 0.95
 	}
 	p.MonthlyProduction = int(newProduction + 0.5)
@@ -170,6 +176,10 @@ func (p *Producer) removeEmployee(person *Person) {
 			return
 		}
 	}
+}
+
+func (p *Producer) calculateSalary() {
+	p.MonthSalary = p.BankBalance / p.NumEmployees
 }
 
 // Checks if a new employee can be hired. Employs them and returns true if so, returns false otherwise.
@@ -281,8 +291,9 @@ func loadConfig() (SimConfig, error) {
 func simulationStep(producers []Producer, people []Person, month int, config SimConfig) ([]Producer, []Person) {
 	for i := range producers {
 		producers[i].MonthHires = 0
-		producers[i].adjustVariables()
+		producers[i].adjustVariables(config)
 		producers[i].payProductionCost(producers, config)
+		producers[i].calculateSalary()
 		producers[i].produceProducts()
 	}
 
@@ -351,7 +362,7 @@ func createConfigIfNotExists() error {
 	defer file.Close()
 
 	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000,
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, InitSalary: 10, MaxHires: 2, InitBalance: 1000, InitWithStock: true, InitStock: 1000, InitPrice: 10, InitMonthlyProduction: 1000, ProductionUnitCostAmount: 10, ProductionCoffeeCost: 1, ProductionGasCost: 1, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000, PriceChangeAmount: 0.1, ProductionChangeAmount: 0.1,
 	}
 
 	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
