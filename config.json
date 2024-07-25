@@ -18,6 +18,9 @@
 	"ProductionCoffeeCost": 1,
 	"ProductionGasCost": 1,
 	"InitWithStock": true,
+	"ProductionChangeAmount": 0.1,
+	"PriceChangeAmount": 0.1,
+	"Producers": null,
 	"PositionMin": 0,
 	"PositionMax": 300
 }
