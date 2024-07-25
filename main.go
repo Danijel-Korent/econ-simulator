@@ -100,6 +100,11 @@ func (p *Person) calculateGasConsumption(producers []Producer, config SimConfig)
 	p.MonthlyGasIntake = pythagDistance(p.PosX, p.PosY, employer.PosX, employer.PosY) * config.GasConsumptionPerDistance
 }
 
+type ProductionCost struct {
+	ProducerIDX int
+	Amount      int
+}
+
 type Producer struct {
 	BankBalance  int
 	Product      string
