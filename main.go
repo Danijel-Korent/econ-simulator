@@ -95,6 +95,7 @@ func (p *Person) buyGoods(producers []Producer) {
 	foodCost := producers[foodProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[foodProducerIdx], p.MonthlyFoodIntake))
 	p.WalletAmount -= foodCost
 	gasCost := producers[gasProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake))
+
 	p.WalletAmount -= gasCost
 	if p.WalletAmount > foodCost {
 		p.WalletAmount -= producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
@@ -106,6 +107,10 @@ func (p *Person) buyGoods(producers []Producer) {
 
 // Returns either the desired number of units to purchase by the individual or the maximum amount they can purchase with their wallet amount
 func (p *Person) getUnitsToPurchase(producer Producer, desiredIntake int) int {
+	if p.WalletAmount <= 0 {
+		return 0
+	}
+
 	if p.WalletAmount >= producer.Price*desiredIntake {
 		return desiredIntake
 	} else {
@@ -119,7 +124,7 @@ func (p *Person) receiveSalary(producers []Producer) {
 	p.WalletAmount += p.Salary
 }
 
-// Look for a new job at a producer if the  salary is JOB_SWITCH_MULTIPLIER higher
+// Look for a new job at a producer if the salary is JOB_SWITCH_MULTIPLIER higher
 func (p *Person) checkNewJobs(producers []Producer, config SimConfig) {
 	for i, producer := range producers {
 		if float64(producer.MonthSalary)/float64(p.Salary) >= config.JobSwitchMultiplier && i != p.Employer {
@@ -160,9 +165,16 @@ func (p *Producer) produceProducts() {
 
 func (p *Producer) payProductionCost(producers []Producer) {
 	for _, cost := range p.ProductionCosts {
-		purchases := int(float64(p.UnpaidUnits) / float64(cost.PerUnits))
-		p.BankBalance -= findProducerIdx(cost.ProducerName, producers)
-		p.UnpaidUnits -= purchases * cost.PerUnits
+		desiredPurchases := int(float64(p.UnpaidUnits) / float64(cost.PerUnits))
+		producerIdx := findProducerIdx(cost.ProducerName, producers)
+		purchasableUnits := producers[producerIdx].getMaxUnits(p.BankBalance)
+		units := desiredPurchases
+		if desiredPurchases < purchasableUnits {
+			units = purchasableUnits
+		}
+
+		p.BankBalance -= producers[producerIdx].registerPurchase(units)
+		p.UnpaidUnits -= units * cost.PerUnits
 	}
 }
 
@@ -214,7 +226,7 @@ func (p *Producer) registerPurchase(amount int) int {
 // Returns the maximum number of units one can buy with a certain amount of money
 func (p *Producer) getMaxUnits(money int) int {
 	//Cast instead of rounding to truncate (prevents overspends)
-	amount := int(money / p.Price)
+	amount := int(float64(money) / float64(p.Price))
 	if amount > p.Stock {
 		return p.Stock
 	}
