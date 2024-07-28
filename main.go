@@ -121,6 +121,7 @@ func (p *Person) getUnitsToPurchase(producer Producer, desiredIntake int) int {
 // Get paid by the employer
 func (p *Person) receiveSalary(producers []Producer) {
 	p.Salary = producers[p.Employer].MonthSalary
+	producers[p.Employer].BankBalance -= p.Salary
 	p.WalletAmount += p.Salary
 }
 
@@ -169,7 +170,7 @@ func (p *Producer) payProductionCost(producers []Producer) {
 		producerIdx := findProducerIdx(cost.ProducerName, producers)
 		purchasableUnits := producers[producerIdx].getMaxUnits(p.BankBalance)
 		units := desiredPurchases
-		if desiredPurchases < purchasableUnits {
+		if desiredPurchases > purchasableUnits {
 			units = purchasableUnits
 		}
 
@@ -328,9 +329,10 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 		people[i].calculateGasConsumption(producers, config)
 		people[i].buyGoods(producers)
 		people[i].receiveSalary(producers)
-		if month == config.PayoutMonth {
-			people[i].WalletAmount *= 2
-		}
+
+		//if month == config.PayoutMonth {
+		//	people[i].WalletAmount *= 2
+		//}
 	}
 
 	return producers, people
