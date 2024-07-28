@@ -326,11 +326,11 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 	for i := range people {
 		people[i].checkNewJobs(producers, config)
 		people[i].calculateGasConsumption(producers, config)
+		people[i].buyGoods(producers)
 		people[i].receiveSalary(producers)
 		if month == config.PayoutMonth {
 			people[i].WalletAmount *= 2
 		}
-		people[i].buyGoods(producers)
 	}
 
 	return producers, people
@@ -397,7 +397,7 @@ func createConfigIfNotExists() error {
 			ProductionChangeAmount: 0.1,
 			PriceChangeAmount:      0.1,
 
-			ProductionCosts: []ProductionCost{},
+			ProductionCosts: []ProductionCost{{ProducerName: "gasoline", PerUnits: 10, Amount: 1}, {ProducerName: "coffee", PerUnits: 10, Amount: 1}},
 		},
 		{
 			ProductName:           "gasoline",
@@ -411,7 +411,7 @@ func createConfigIfNotExists() error {
 			ProductionChangeAmount: 0.1,
 			PriceChangeAmount:      0.1,
 
-			ProductionCosts: []ProductionCost{},
+			ProductionCosts: []ProductionCost{{ProducerName: "gasoline", PerUnits: 10, Amount: 1}, {ProducerName: "coffee", PerUnits: 10, Amount: 1}},
 		},
 		{
 			ProductName:           "coffee",
@@ -425,7 +425,7 @@ func createConfigIfNotExists() error {
 			ProductionChangeAmount: 0.1,
 			PriceChangeAmount:      0.1,
 
-			ProductionCosts: []ProductionCost{},
+			ProductionCosts: []ProductionCost{{ProducerName: "gasoline", PerUnits: 10, Amount: 1}, {ProducerName: "coffee", PerUnits: 10, Amount: 1}},
 		},
 	}
 

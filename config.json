@@ -19,7 +19,18 @@
 			"InitStock": 1000,
 			"ProductionChangeAmount": 0.1,
 			"PriceChangeAmount": 0.1,
-			"ProductionCosts": []
+			"ProductionCosts": [
+				{
+					"ProducerName": "gasoline",
+					"PerUnits": 10,
+					"Amount": 1
+				},
+				{
+					"ProducerName": "coffee",
+					"PerUnits": 10,
+					"Amount": 1
+				}
+			]
 		},
 		{
 			"ProductName": "gasoline",
@@ -31,7 +42,18 @@
 			"InitStock": 1000,
 			"ProductionChangeAmount": 0.1,
 			"PriceChangeAmount": 0.1,
-			"ProductionCosts": []
+			"ProductionCosts": [
+				{
+					"ProducerName": "gasoline",
+					"PerUnits": 10,
+					"Amount": 1
+				},
+				{
+					"ProducerName": "coffee",
+					"PerUnits": 10,
+					"Amount": 1
+				}
+			]
 		},
 		{
 			"ProductName": "coffee",
@@ -43,7 +65,18 @@
 			"InitStock": 1000,
 			"ProductionChangeAmount": 0.1,
 			"PriceChangeAmount": 0.1,
-			"ProductionCosts": []
+			"ProductionCosts": [
+				{
+					"ProducerName": "gasoline",
+					"PerUnits": 10,
+					"Amount": 1
+				},
+				{
+					"ProducerName": "coffee",
+					"PerUnits": 10,
+					"Amount": 1
+				}
+			]
 		}
 	],
 	"PositionMin": 0,
