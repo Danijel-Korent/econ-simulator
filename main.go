@@ -87,22 +87,33 @@ type Person struct {
 	PosY              int
 }
 
+func (p *Person) setWalletAmount(amount int) {
+	if amount < 0 {
+		panic(fmt.Sprintf("Attempted to set wallet amount of person %v to %v", p.IdNumber, amount))
+	}
+
+	p.WalletAmount = amount
+}
+
 // Simulates the purchase of goods, adjusting variables on the person and alerting the producer
 func (p *Person) buyGoods(producers []Producer) {
 	foodProducerIdx := findProducerIdx("food", producers)
 	gasProducerIdx := findProducerIdx("gasoline", producers)
 	coffeeProducerIdx := findProducerIdx("coffee", producers)
-	foodCost := producers[foodProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[foodProducerIdx], p.MonthlyFoodIntake))
-	p.WalletAmount -= foodCost
-	gasCost := producers[gasProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake))
 
-	p.WalletAmount -= gasCost
+	foodCost := producers[foodProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[foodProducerIdx], p.MonthlyFoodIntake))
+	p.setWalletAmount(p.WalletAmount - foodCost)
+
+	gasCost := producers[gasProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake))
+	p.setWalletAmount(p.WalletAmount - gasCost)
+
 	if p.WalletAmount > foodCost {
 		p.WalletAmount -= producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
 	}
 
 	maxCoffee := producers[coffeeProducerIdx].getMaxUnits(p.WalletAmount)
-	p.WalletAmount -= producers[coffeeProducerIdx].registerPurchase(maxCoffee)
+	coffeeCost := producers[coffeeProducerIdx].registerPurchase(maxCoffee)
+	p.setWalletAmount(p.WalletAmount - coffeeCost)
 }
 
 // Returns either the desired number of units to purchase by the individual or the maximum amount they can purchase with their wallet amount
@@ -122,7 +133,8 @@ func (p *Person) getUnitsToPurchase(producer Producer, desiredIntake int) int {
 func (p *Person) receiveSalary(producers []Producer) {
 	p.Salary = producers[p.Employer].MonthSalary
 	producers[p.Employer].BankBalance -= p.Salary
-	p.WalletAmount += p.Salary
+
+	p.setWalletAmount(p.WalletAmount + p.Salary)
 }
 
 // Look for a new job at a producer if the salary is JOB_SWITCH_MULTIPLIER higher
@@ -158,6 +170,14 @@ func (p *Producer) adjustVariables() {
 	p.Price = int(newPrice + 0.5)
 }
 
+func (p *Producer) setBankBalance(amount int) {
+	if amount < 0 {
+		panic(fmt.Sprintf("Attempted to set bank balance of producer %v to %v", p.Product, amount))
+	}
+
+	p.BankBalance = amount
+}
+
 // Adds as much product to the producer as they have money to make
 func (p *Producer) produceProducts() {
 	p.Stock += p.MonthlyProduction
@@ -174,7 +194,8 @@ func (p *Producer) payProductionCost(producers []Producer) {
 			units = purchasableUnits
 		}
 
-		p.BankBalance -= producers[producerIdx].registerPurchase(units)
+		purchaseCost := producers[producerIdx].registerPurchase(units)
+		p.setBankBalance(p.BankBalance - purchaseCost)
 		p.UnpaidUnits -= units * cost.PerUnits
 	}
 }
@@ -215,11 +236,15 @@ func (p *Producer) addEmployee(person *Person) bool {
 func (p *Producer) registerPurchase(amount int) int {
 	if p.Stock >= amount {
 		p.Stock -= amount
-		p.BankBalance += amount * p.Price
+		newBalance := p.BankBalance + (amount * p.Price)
+		fmt.Println(p.BankBalance)
+		p.setBankBalance(newBalance)
+
 		return amount * p.Price
 	} else {
 		price := p.Stock * p.Price
 		p.Stock = 0
+		p.setBankBalance(p.BankBalance + price)
 		return price
 	}
 }
