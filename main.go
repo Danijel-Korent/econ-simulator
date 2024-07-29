@@ -107,8 +107,9 @@ func (p *Person) buyGoods(producers []Producer) {
 	gasCost := producers[gasProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake))
 	p.setWalletAmount(p.WalletAmount - gasCost)
 
-	if p.WalletAmount > foodCost {
-		p.WalletAmount -= producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
+	if p.WalletAmount > p.MonthlyFoodIntake*producers[foodProducerIdx].Price {
+		foodCost = producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
+		p.setWalletAmount(p.WalletAmount - foodCost)
 	}
 
 	maxCoffee := producers[coffeeProducerIdx].getMaxUnits(p.WalletAmount)
@@ -127,14 +128,6 @@ func (p *Person) getUnitsToPurchase(producer Producer, desiredIntake int) int {
 	} else {
 		return producer.getMaxUnits(p.WalletAmount)
 	}
-}
-
-// Get paid by the employer
-func (p *Person) receiveSalary(producers []Producer) {
-	p.Salary = producers[p.Employer].MonthSalary
-	producers[p.Employer].BankBalance -= p.Salary
-
-	p.setWalletAmount(p.WalletAmount + p.Salary)
 }
 
 // Look for a new job at a producer if the salary is JOB_SWITCH_MULTIPLIER higher
@@ -211,13 +204,18 @@ func (p *Producer) removeEmployee(person *Person) {
 	}
 }
 
-func (p *Producer) calculateSalary() {
+func (p *Producer) payWorkers() {
 	if p.NumEmployees > 0 {
 		p.MonthSalary = p.BankBalance / p.NumEmployees
 		return
 	}
 
 	p.MonthSalary = p.BankBalance
+
+	for i := range p.Employees {
+		p.Employees[i].setWalletAmount(p.Employees[i].WalletAmount + p.MonthSalary)
+		p.setBankBalance(p.BankBalance - p.MonthSalary)
+	}
 }
 
 // Checks if a new employee can be hired. Employs them and returns true if so, returns false otherwise.
@@ -237,9 +235,7 @@ func (p *Producer) registerPurchase(amount int) int {
 	if p.Stock >= amount {
 		p.Stock -= amount
 		newBalance := p.BankBalance + (amount * p.Price)
-		fmt.Println(p.BankBalance)
 		p.setBankBalance(newBalance)
-
 		return amount * p.Price
 	} else {
 		price := p.Stock * p.Price
@@ -251,6 +247,9 @@ func (p *Producer) registerPurchase(amount int) int {
 
 // Returns the maximum number of units one can buy with a certain amount of money
 func (p *Producer) getMaxUnits(money int) int {
+	if money < 0 {
+		return 0
+	}
 	//Cast instead of rounding to truncate (prevents overspends)
 	amount := int(float64(money) / float64(p.Price))
 	if amount > p.Stock {
@@ -345,7 +344,7 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 		producers[i].MonthHires = 0
 		producers[i].adjustVariables()
 		producers[i].payProductionCost(producers)
-		producers[i].calculateSalary()
+		producers[i].payWorkers()
 		producers[i].produceProducts()
 	}
 
@@ -353,7 +352,6 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 		people[i].checkNewJobs(producers, config)
 		people[i].calculateGasConsumption(producers, config)
 		people[i].buyGoods(producers)
-		people[i].receiveSalary(producers)
 
 		//if month == config.PayoutMonth {
 		//	people[i].WalletAmount *= 2
