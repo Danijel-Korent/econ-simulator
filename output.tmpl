@@ -90,6 +90,7 @@
 		<th>Salary</th>
 		<th>Employees</th>
 		<th>Position</th>
+		<th>Units Sold</th>
 	</tr>
 	{{range $p := $m.Producers}} 
 		<tr>
@@ -101,6 +102,7 @@
 			<td>{{$p.MonthSalary}}</td>
 			<td>{{$p.NumEmployees}}</td>
 			<td>{{$p.PosX}}, {{$p.PosY}}</td>
+			<td>{{$p.UnitsSold}}</td>
 		<tr>
 	{{end}}
 </table>

@@ -69,6 +69,8 @@ type Producer struct {
 	PosX              int
 	PosY              int
 
+	UnitsSold int
+
 	MaxHires               int
 	ProductionChangeAmount float64
 	PriceChangeAmount      float64
@@ -244,11 +246,13 @@ func (p *Producer) addEmployee(person *Person) bool {
 func (p *Producer) registerPurchase(amount int) int {
 	if p.Stock >= amount {
 		p.Stock -= amount
+		p.UnitsSold += amount
 		newBalance := p.BankBalance + (amount * p.Price)
 		p.setBankBalance(newBalance)
 		return amount * p.Price
 	} else {
 		price := p.Stock * p.Price
+		p.UnitsSold += p.Stock
 		p.Stock = 0
 		p.setBankBalance(p.BankBalance + price)
 		return price
@@ -351,6 +355,7 @@ func loadConfig() (SimConfig, error) {
 // Steps through one month of the simulation, adjusting variables as needed
 func simulationStep(producers []Producer, people []Person, month int, config SimConfig) ([]Producer, []Person) {
 	for i := range producers {
+		producers[i].UnitsSold = 0
 		producers[i].MonthHires = 0
 		producers[i].adjustVariables()
 		producers[i].payProductionCost(producers)
