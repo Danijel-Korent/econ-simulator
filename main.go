@@ -85,6 +85,10 @@ type Person struct {
 	MonthlyGasIntake  int
 	PosX              int
 	PosY              int
+
+	FoodConsumption   int
+	GasConsumption    int
+	CoffeeConsumption int
 }
 
 func (p *Person) setWalletAmount(amount int) {
@@ -97,24 +101,31 @@ func (p *Person) setWalletAmount(amount int) {
 
 // Simulates the purchase of goods, adjusting variables on the person and alerting the producer
 func (p *Person) buyGoods(producers []Producer) {
+
 	foodProducerIdx := findProducerIdx("food", producers)
 	gasProducerIdx := findProducerIdx("gasoline", producers)
 	coffeeProducerIdx := findProducerIdx("coffee", producers)
 
-	foodCost := producers[foodProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[foodProducerIdx], p.MonthlyFoodIntake))
+	foodUnits := p.getUnitsToPurchase(producers[foodProducerIdx], p.MonthlyFoodIntake)
+	foodCost := producers[foodProducerIdx].registerPurchase(foodUnits)
 	p.setWalletAmount(p.WalletAmount - foodCost)
+	p.FoodConsumption = foodUnits
 
-	gasCost := producers[gasProducerIdx].registerPurchase(p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake))
+	gasUnits := p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake)
+	gasCost := producers[gasProducerIdx].registerPurchase(gasUnits)
 	p.setWalletAmount(p.WalletAmount - gasCost)
+	p.GasConsumption = gasUnits
 
 	if p.WalletAmount > p.MonthlyFoodIntake*producers[foodProducerIdx].Price {
 		foodCost = producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
 		p.setWalletAmount(p.WalletAmount - foodCost)
+		p.FoodConsumption += p.MonthlyFoodIntake
 	}
 
 	maxCoffee := producers[coffeeProducerIdx].getMaxUnits(p.WalletAmount)
 	coffeeCost := producers[coffeeProducerIdx].registerPurchase(maxCoffee)
 	p.setWalletAmount(p.WalletAmount - coffeeCost)
+	p.CoffeeConsumption = maxCoffee
 }
 
 // Returns either the desired number of units to purchase by the individual or the maximum amount they can purchase with their wallet amount
@@ -204,13 +215,12 @@ func (p *Producer) removeEmployee(person *Person) {
 	}
 }
 
-func (p *Producer) payWorkers() {
+func (p *Producer) calculateSalary() {
 	if p.NumEmployees > 0 {
 		p.MonthSalary = p.BankBalance / p.NumEmployees
-		return
+	} else {
+		p.MonthSalary = p.BankBalance
 	}
-
-	p.MonthSalary = p.BankBalance
 
 	for i := range p.Employees {
 		p.Employees[i].setWalletAmount(p.Employees[i].WalletAmount + p.MonthSalary)
@@ -344,7 +354,7 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 		producers[i].MonthHires = 0
 		producers[i].adjustVariables()
 		producers[i].payProductionCost(producers)
-		producers[i].payWorkers()
+		producers[i].calculateSalary()
 		producers[i].produceProducts()
 	}
 

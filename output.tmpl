@@ -60,6 +60,9 @@
 		<th>Monthly food</th>
 		<th>Monthly gas</th>
 		<th>Position</th>
+		<th>Food bought</th>
+		<th>Gas bought</th>
+		<th>Coffee bought</th>
 	</tr>
 	{{range $p := $m.People}} 
 		<tr>
@@ -70,6 +73,9 @@
 			<td>{{$p.MonthlyFoodIntake}}</td>
 			<td>{{$p.MonthlyGasIntake}}</td>
 			<td>{{$p.PosX}}, {{$p.PosY}}</td>
+			<td>{{$p.FoodConsumption}}</td>
+			<td>{{$p.GasConsumption}}</td>
+			<td>{{$p.CoffeeConsumption}}</td>
 		<tr>
 	{{end}}
 </table>
