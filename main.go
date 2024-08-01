@@ -19,6 +19,7 @@ type ProducerConfig struct {
 	InitPrice             int
 	InitMonthlyProduction int
 	InitStock             int
+	ProductionLimit       int
 
 	//These variables define the amount above or below one that these variables will change. e.g. a value of 0.05 means that increases will be 1.05 and decreases will be 0.95
 	ProductionChangeAmount float64
@@ -66,6 +67,7 @@ type Producer struct {
 	//Number of units since the producer last bought necessary materials (gas and coffee)
 	UnpaidUnits       int
 	MonthlyProduction int
+	ProductionLimit   int
 	PosX              int
 	PosY              int
 
@@ -172,6 +174,10 @@ func (p *Producer) adjustVariables() {
 		newProduction = float64(p.MonthlyProduction) * (1.0 - p.ProductionChangeAmount)
 		newPrice = float64(p.Price) * (1.0 - p.PriceChangeAmount)
 	}
+	fmt.Println(p.ProductionLimit)
+	if newProduction > float64(p.ProductionLimit) {
+		newProduction = float64(p.ProductionLimit)
+	}
 	p.MonthlyProduction = int(newProduction + 0.5)
 	p.Price = int(newPrice + 0.5)
 }
@@ -217,7 +223,7 @@ func (p *Producer) removeEmployee(person *Person) {
 	}
 }
 
-func (p *Producer) calculateSalary() {
+func (p *Producer) payEmployees() {
 	if p.NumEmployees > 0 {
 		p.MonthSalary = p.BankBalance / p.NumEmployees
 	} else {
@@ -226,6 +232,7 @@ func (p *Producer) calculateSalary() {
 
 	for i := range p.Employees {
 		p.Employees[i].setWalletAmount(p.Employees[i].WalletAmount + p.MonthSalary)
+		p.Employees[i].Salary = p.MonthSalary
 		p.setBankBalance(p.BankBalance - p.MonthSalary)
 	}
 }
@@ -359,7 +366,7 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 		producers[i].MonthHires = 0
 		producers[i].adjustVariables()
 		producers[i].payProductionCost(producers)
-		producers[i].calculateSalary()
+		producers[i].payEmployees()
 		producers[i].produceProducts()
 	}
 
@@ -379,7 +386,7 @@ func simulationStep(producers []Producer, people []Person, month int, config Sim
 // Initialises a new producer and returns it
 func initProducer(config SimConfig, pConfig ProducerConfig, r *rand.Rand) Producer {
 
-	return Producer{BankBalance: pConfig.InitBalance, Product: pConfig.ProductName, Price: pConfig.InitPrice, MaxHires: pConfig.MaxHires, Stock: pConfig.InitStock, MonthSalary: pConfig.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: pConfig.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r), ProductionChangeAmount: pConfig.ProductionChangeAmount, PriceChangeAmount: pConfig.PriceChangeAmount, ProductionCosts: pConfig.ProductionCosts, UnpaidUnits: 0}
+	return Producer{BankBalance: pConfig.InitBalance, Product: pConfig.ProductName, Price: pConfig.InitPrice, MaxHires: pConfig.MaxHires, Stock: pConfig.InitStock, MonthSalary: pConfig.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: pConfig.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r), ProductionChangeAmount: pConfig.ProductionChangeAmount, PriceChangeAmount: pConfig.PriceChangeAmount, ProductionCosts: pConfig.ProductionCosts, UnpaidUnits: 0, ProductionLimit: pConfig.ProductionLimit}
 }
 
 // Creates a new person, generating random variables. Returns the person and the producer they are employed by
@@ -433,6 +440,7 @@ func createConfigIfNotExists() error {
 			InitPrice:             10,
 			InitMonthlyProduction: 100,
 			InitStock:             1000,
+			ProductionLimit:       1000,
 
 			ProductionChangeAmount: 0.1,
 			PriceChangeAmount:      0.1,
@@ -447,6 +455,7 @@ func createConfigIfNotExists() error {
 			InitPrice:             10,
 			InitMonthlyProduction: 100,
 			InitStock:             1000,
+			ProductionLimit:       1000,
 
 			ProductionChangeAmount: 0.1,
 			PriceChangeAmount:      0.1,
@@ -461,6 +470,7 @@ func createConfigIfNotExists() error {
 			InitPrice:             10,
 			InitMonthlyProduction: 100,
 			InitStock:             1000,
+			ProductionLimit:       1000,
 
 			ProductionChangeAmount: 0.1,
 			PriceChangeAmount:      0.1,
