@@ -185,8 +185,9 @@ func (p *Producer) adjustVariables() {
 	if newProduction > float64(p.ProductionLimit) {
 		newProduction = float64(p.ProductionLimit)
 	}
-	p.MonthlyProduction = int(newProduction + 0.5)
-	p.Price = int(newPrice + 0.5)
+
+	p.MonthlyProduction = int(newProduction)
+	p.Price = int(newPrice)
 }
 
 func (p *Producer) setBankBalance(amount int) {
