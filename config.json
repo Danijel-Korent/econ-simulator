@@ -1,9 +1,11 @@
 {
 	"MaxMonths": 100,
 	"PayoutMonth": 49,
-	"NumPeople": 3,
+	"NumPeople": 20,
 	"StartingWalletMin": 0,
 	"StartingWalletMax": 1000,
+	"SavingsRatioMin": 0.1,
+	"SavingsRatioMax": 0.3,
 	"FoodIntakeMin": 30,
 	"FoodIntakeMax": 60,
 	"GasConsumptionPerDistance": 1,

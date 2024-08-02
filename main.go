@@ -37,6 +37,8 @@ type SimConfig struct {
 	//Individuals
 	StartingWalletMin         int
 	StartingWalletMax         int
+	SavingsRatioMin           float64
+	SavingsRatioMax           float64
 	FoodIntakeMin             int
 	FoodIntakeMax             int
 	GasConsumptionPerDistance int
@@ -93,6 +95,7 @@ type Person struct {
 	FoodConsumption   int
 	GasConsumption    int
 	CoffeeConsumption int
+	SavingsRatio      float64
 }
 
 func (p *Person) setWalletAmount(amount int) {
@@ -105,6 +108,9 @@ func (p *Person) setWalletAmount(amount int) {
 
 // Simulates the purchase of goods, adjusting variables on the person and alerting the producer
 func (p *Person) buyGoods(producers []Producer) {
+	//Savings (temporarily subtracted and then re-added after purchases)
+	savings := int(float64(p.WalletAmount) * p.SavingsRatio)
+	p.setWalletAmount(p.WalletAmount - savings)
 
 	foodProducerIdx := findProducerIdx("food", producers)
 	gasProducerIdx := findProducerIdx("gasoline", producers)
@@ -130,6 +136,8 @@ func (p *Person) buyGoods(producers []Producer) {
 	coffeeCost := producers[coffeeProducerIdx].registerPurchase(maxCoffee)
 	p.setWalletAmount(p.WalletAmount - coffeeCost)
 	p.CoffeeConsumption = maxCoffee
+
+	p.setWalletAmount(p.WalletAmount + savings)
 }
 
 // Returns either the desired number of units to purchase by the individual or the maximum amount they can purchase with their wallet amount
@@ -174,7 +182,6 @@ func (p *Producer) adjustVariables() {
 		newProduction = float64(p.MonthlyProduction) * (1.0 - p.ProductionChangeAmount)
 		newPrice = float64(p.Price) * (1.0 - p.PriceChangeAmount)
 	}
-	fmt.Println(p.ProductionLimit)
 	if newProduction > float64(p.ProductionLimit) {
 		newProduction = float64(p.ProductionLimit)
 	}
@@ -308,7 +315,6 @@ func main() {
 		producers[person.Employer].NumEmployees += 1
 		producers[person.Employer].Employees = append(producers[person.Employer].Employees, &person)
 		people = append(people, person)
-
 	}
 
 	detailedMonths := make([]DetailedMonth, config.MaxMonths+1)
@@ -397,6 +403,7 @@ func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 		IdNumber:          ID,
 		Employer:          randomEmployer,
 		WalletAmount:      randIntInRange(config.StartingWalletMin, config.StartingWalletMax, r),
+		SavingsRatio:      randFloatInRange(config.SavingsRatioMin, config.SavingsRatioMax, r),
 		Salary:            0,
 		MonthlyFoodIntake: randIntInRange(config.FoodIntakeMin, config.FoodIntakeMax, r),
 		PosX:              randIntInRange(config.PositionMin, config.PositionMax, r),
@@ -407,6 +414,11 @@ func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 // Generates a random integer between min and max
 func randIntInRange(min int, max int, r *rand.Rand) int {
 	return r.Intn(max-min) + min
+}
+
+// Generates a random float between min and max
+func randFloatInRange(min float64, max float64, r *rand.Rand) float64 {
+	return min + r.Float64()*(max-min)
 }
 
 // Debug function for testing how money enters the simulation
@@ -480,7 +492,7 @@ func createConfigIfNotExists() error {
 	}
 
 	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000, Producers: defaultProducers,
+		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000, Producers: defaultProducers, SavingsRatioMin: 0.1, SavingsRatioMax: 0.3,
 	}
 
 	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
