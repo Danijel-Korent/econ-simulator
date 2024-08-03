@@ -37,7 +37,6 @@ func main() {
 		}
 	}
 
-	fmt.Println("Simulation exiting")
 }
 
 // Steps through one month of the simulation, adjusting variables as needed
@@ -81,4 +80,5 @@ func exitSimulation(people []Person, producers []Producer, basicMonths []BasicMo
 		fmt.Fprintln(os.Stderr, err)
 	}
 
+	fmt.Println("Simulation exiting")
 }
