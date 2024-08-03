@@ -8,11 +8,11 @@ import (
 
 type BasicMonthTable struct {
 	Month         int
-	AverageWallet int
-	FoodPrice     int
-	GasPrice      int
-	CoffeePrice   int
-	TotalMoney    int
+	AverageWallet float64
+	FoodPrice     float64
+	GasPrice      float64
+	CoffeePrice   float64
+	TotalMoney    float64
 }
 
 type DetailedMonth struct {
@@ -39,19 +39,19 @@ func fillDetailedMonth(people []Person, producers []Producer, month int) Detaile
 
 // Fills a basic month struct, used for the overview in the HTML template
 func fillBasicMonth(people []Person, producers []Producer, month int) BasicMonthTable {
-	averageWallet := 0
+	averageWallet := 0.0
 	for _, person := range people {
 		averageWallet += person.WalletAmount
 	}
-	averageWallet /= len(people)
+	averageWallet /= float64(len(people))
 
 	return BasicMonthTable{
 		Month:         month + 1,
-		AverageWallet: averageWallet,
-		FoodPrice:     producers[findProducerIdx("food", producers)].Price,
-		GasPrice:      producers[findProducerIdx("gasoline", producers)].Price,
-		CoffeePrice:   producers[findProducerIdx("coffee", producers)].Price,
-		TotalMoney:    calculateTotalMoneyInSimulation(people, producers),
+		AverageWallet: roundFloat(averageWallet, 2),
+		FoodPrice:     roundFloat(producers[findProducerIdx("food", producers)].Price, 2),
+		GasPrice:      roundFloat(producers[findProducerIdx("gasoline", producers)].Price, 2),
+		CoffeePrice:   roundFloat(producers[findProducerIdx("coffee", producers)].Price, 2),
+		TotalMoney:    roundFloat(calculateTotalMoneyInSimulation(people, producers), 2),
 	}
 }
 

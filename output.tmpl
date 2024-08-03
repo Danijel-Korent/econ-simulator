@@ -68,7 +68,7 @@
 		<tr>
 			
 			<td>{{$p.IdNumber}}</td>
-			<td>{{$p.WalletAmount}}</td>
+			<td>{{printf "%.2f" $p.WalletAmount}}</td>
 			<td>{{$p.Salary}}</td>
 			<td>{{$p.MonthlyFoodIntake}}</td>
 			<td>{{$p.MonthlyGasIntake}}</td>
@@ -94,12 +94,12 @@
 	</tr>
 	{{range $p := $m.Producers}} 
 		<tr>
-			<td>{{$p.BankBalance}}</td>
+			<td>{{printf "%.2f" $p.BankBalance}}</td>
 			<td>{{$p.Product}}</td>
-			<td>{{$p.Price}}</td>
+			<td>{{printf "%.2f" $p.Price}}</td>
 			<td>{{$p.Stock}}</td>
 			<td>{{$p.MonthlyProduction}}</td>
-			<td>{{$p.MonthSalary}}</td>
+			<td>{{printf "%.2f" $p.MonthSalary}}</td>
 			<td>{{$p.NumEmployees}}</td>
 			<td>{{$p.PosX}}, {{$p.PosY}}</td>
 			<td>{{$p.UnitsSold}}</td>

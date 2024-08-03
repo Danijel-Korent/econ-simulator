@@ -13,10 +13,10 @@ const CONFIG_FILE_NAME = "config.json"
 
 type ProducerConfig struct {
 	ProductName           string
-	InitSalary            int
+	InitSalary            float64
 	MaxHires              int
-	InitBalance           int
-	InitPrice             int
+	InitBalance           float64
+	InitPrice             float64
 	InitMonthlyProduction int
 	InitStock             int
 	ProductionLimit       int
@@ -35,8 +35,8 @@ type SimConfig struct {
 	NumPeople   int
 
 	//Individuals
-	StartingWalletMin         int
-	StartingWalletMax         int
+	StartingWalletMin         float64
+	StartingWalletMax         float64
 	SavingsRatioMin           float64
 	SavingsRatioMax           float64
 	FoodIntakeMin             int
@@ -58,13 +58,13 @@ type ProductionCost struct {
 }
 
 type Producer struct {
-	BankBalance  int
+	BankBalance  float64
 	Product      string
-	MonthSalary  int
+	MonthSalary  float64
 	MonthHires   int
 	Employees    []*Person
 	NumEmployees int
-	Price        int
+	Price        float64
 	Stock        int
 	//Number of units since the producer last bought necessary materials (gas and coffee)
 	UnpaidUnits       int
@@ -85,8 +85,8 @@ type Producer struct {
 type Person struct {
 	IdNumber          int
 	Employer          int
-	WalletAmount      int
-	Salary            int
+	WalletAmount      float64
+	Salary            float64
 	MonthlyFoodIntake int
 	MonthlyGasIntake  int
 	PosX              int
@@ -98,7 +98,7 @@ type Person struct {
 	SavingsRatio      float64
 }
 
-func (p *Person) setWalletAmount(amount int) {
+func (p *Person) setWalletAmount(amount float64) {
 	if amount < 0 {
 		panic(fmt.Sprintf("Attempted to set wallet amount of person %v to %v", p.IdNumber, amount))
 	}
@@ -109,7 +109,7 @@ func (p *Person) setWalletAmount(amount int) {
 // Simulates the purchase of goods, adjusting variables on the person and alerting the producer
 func (p *Person) buyGoods(producers []Producer) {
 	//Savings (temporarily subtracted and then re-added after purchases)
-	savings := int(float64(p.WalletAmount) * p.SavingsRatio)
+	savings := p.WalletAmount * p.SavingsRatio
 	p.setWalletAmount(p.WalletAmount - savings)
 
 	foodProducerIdx := findProducerIdx("food", producers)
@@ -126,7 +126,7 @@ func (p *Person) buyGoods(producers []Producer) {
 	p.setWalletAmount(p.WalletAmount - gasCost)
 	p.GasConsumption = gasUnits
 
-	if p.WalletAmount > p.MonthlyFoodIntake*producers[foodProducerIdx].Price {
+	if p.WalletAmount > float64(p.MonthlyFoodIntake)*producers[foodProducerIdx].Price {
 		foodCost = producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
 		p.setWalletAmount(p.WalletAmount - foodCost)
 		p.FoodConsumption += p.MonthlyFoodIntake
@@ -146,7 +146,7 @@ func (p *Person) getUnitsToPurchase(producer Producer, desiredIntake int) int {
 		return 0
 	}
 
-	if p.WalletAmount >= producer.Price*desiredIntake {
+	if p.WalletAmount >= producer.Price*float64(desiredIntake) {
 		return desiredIntake
 	} else {
 		return producer.getMaxUnits(p.WalletAmount)
@@ -187,10 +187,10 @@ func (p *Producer) adjustVariables() {
 	}
 
 	p.MonthlyProduction = int(newProduction)
-	p.Price = int(newPrice)
+	p.Price = newPrice
 }
 
-func (p *Producer) setBankBalance(amount int) {
+func (p *Producer) setBankBalance(amount float64) {
 	if amount < 0 {
 		panic(fmt.Sprintf("Attempted to set bank balance of producer %v to %v", p.Product, amount))
 	}
@@ -233,14 +233,17 @@ func (p *Producer) removeEmployee(person *Person) {
 
 func (p *Producer) payEmployees() {
 	if p.NumEmployees > 0 {
-		p.MonthSalary = p.BankBalance / p.NumEmployees
+		p.MonthSalary = float64(int(p.BankBalance / float64(p.NumEmployees)))
 	} else {
 		p.MonthSalary = p.BankBalance
 	}
-
 	for i := range p.Employees {
 		p.Employees[i].setWalletAmount(p.Employees[i].WalletAmount + p.MonthSalary)
 		p.Employees[i].Salary = p.MonthSalary
+
+		fmt.Println(p.BankBalance)
+		fmt.Println(p.MonthSalary)
+
 		p.setBankBalance(p.BankBalance - p.MonthSalary)
 	}
 }
@@ -258,15 +261,15 @@ func (p *Producer) addEmployee(person *Person) bool {
 }
 
 // Subtracts from stock, adding to bank balance. Returns the cost of purchase.
-func (p *Producer) registerPurchase(amount int) int {
+func (p *Producer) registerPurchase(amount int) float64 {
 	if p.Stock >= amount {
 		p.Stock -= amount
 		p.UnitsSold += amount
-		newBalance := p.BankBalance + (amount * p.Price)
+		newBalance := p.BankBalance + (float64(amount) * p.Price)
 		p.setBankBalance(newBalance)
-		return amount * p.Price
+		return float64(amount) * p.Price
 	} else {
-		price := p.Stock * p.Price
+		price := float64(p.Stock) * p.Price
 		p.UnitsSold += p.Stock
 		p.Stock = 0
 		p.setBankBalance(p.BankBalance + price)
@@ -275,7 +278,7 @@ func (p *Producer) registerPurchase(amount int) int {
 }
 
 // Returns the maximum number of units one can buy with a certain amount of money
-func (p *Producer) getMaxUnits(money int) int {
+func (p *Producer) getMaxUnits(money float64) int {
 	if money < 0 {
 		return 0
 	}
@@ -403,7 +406,7 @@ func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 	return Person{
 		IdNumber:          ID,
 		Employer:          randomEmployer,
-		WalletAmount:      randIntInRange(config.StartingWalletMin, config.StartingWalletMax, r),
+		WalletAmount:      randFloatInRange(config.StartingWalletMin, config.StartingWalletMax, r),
 		SavingsRatio:      randFloatInRange(config.SavingsRatioMin, config.SavingsRatioMax, r),
 		Salary:            0,
 		MonthlyFoodIntake: randIntInRange(config.FoodIntakeMin, config.FoodIntakeMax, r),
@@ -422,9 +425,14 @@ func randFloatInRange(min float64, max float64, r *rand.Rand) float64 {
 	return min + r.Float64()*(max-min)
 }
 
+func roundFloat(val float64, precision uint) float64 {
+	ratio := math.Pow(10, float64(precision))
+	return math.Round(val*ratio) / ratio
+}
+
 // Debug function for testing how money enters the simulation
-func calculateTotalMoneyInSimulation(people []Person, producers []Producer) int {
-	total := 0
+func calculateTotalMoneyInSimulation(people []Person, producers []Producer) float64 {
+	total := 0.0
 	for _, p := range people {
 		total += p.WalletAmount
 	}
