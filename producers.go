@@ -158,6 +158,7 @@ func (p *Producer) adjustVariables() {
 		newProduction = float64(p.MonthlyProduction) * (1.0 - p.ProductionChangeAmount)
 		newPrice = float64(p.Price) * (1.0 - p.PriceChangeAmount)
 	}
+
 	if newProduction > float64(p.ProductionLimit) {
 		newProduction = float64(p.ProductionLimit)
 	}
@@ -166,6 +167,7 @@ func (p *Producer) adjustVariables() {
 	p.Price = int(newPrice + 0.5)
 }
 
+// Looks through the array of producers and finds one with the matching product name and returns its index in the array
 func findProducerIdx(name string, producers []Producer) int {
 	for i, p := range producers {
 		if p.Product == name {
