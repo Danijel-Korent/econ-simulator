@@ -2,7 +2,7 @@
 
 ## File splitting
 
-The code has been split into 5 additional files (besides main.go). 
+The code has been split into 5 additional files (besides main.go). This was done to help ensure that main.go focuses on program flow instead of the types and functions involved in the application. The idea is that the codebase has gone beyond a script at this point, and is worthy of an actual codebase with multiple files that have differing domains.
 
 ### people.go
 
@@ -24,6 +24,6 @@ This file handles the loading of the configuration, the creation of the default 
 
 This file is the smallest. It simply contains small maths functions (e.g. random number generation, distance calculation). While right now it seems pointless, it may become useful to split out if the simulation is going to expand.
 
-## Major changes
+## Notable changes
 
-The actions of people and producers each simulation step are now handled in their respective files in functions called `simulationStep`. The main `simulationStep` function in `main.go` now only serves to call these functions on each producer and person.
+The actions of people and producers each simulation step are now handled in their respective files in functions called `simulationStep`. The main `simulationStep` function in `main.go` now only serves to call these functions on each producer and person. In some places, such as where people buy goods, repetition has been reduced by creating new functions. 
