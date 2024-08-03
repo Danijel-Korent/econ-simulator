@@ -2,14 +2,13 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"math"
 	"math/rand"
 	"os"
 	"time"
 )
-
-const CONFIG_FILE_NAME = "config.json"
 
 type ProducerConfig struct {
 	ProductName           string
@@ -186,8 +185,8 @@ func (p *Producer) adjustVariables() {
 		newProduction = float64(p.ProductionLimit)
 	}
 
-	p.MonthlyProduction = int(newProduction)
-	p.Price = int(newPrice)
+	p.MonthlyProduction = int(newProduction + 0.5)
+	p.Price = int(newPrice + 0.5)
 }
 
 func (p *Producer) setBankBalance(amount int) {
@@ -296,8 +295,14 @@ func findProducerIdx(name string, producers []Producer) int {
 	return -1
 }
 
+const DEFAULT_CONFIG = "default_configuration.json"
+
 func main() {
-	config, err := loadConfig()
+	var configFile = flag.String("config", DEFAULT_CONFIG, "specifies the configuration file to use")
+
+	flag.Parse()
+
+	config, err := loadConfig(*configFile)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 	}
@@ -346,23 +351,29 @@ func main() {
 	fmt.Println("Simulation exiting")
 }
 
-func loadConfig() (SimConfig, error) {
-	_, err := os.Open(CONFIG_FILE_NAME)
+func loadConfig(configPath string) (SimConfig, error) {
+	fmt.Printf("Attempting to load %v \n", configPath)
+	_, err := os.Open(configPath)
 	if os.IsNotExist(err) {
-		err := createConfigIfNotExists()
-		if err != nil {
-			return SimConfig{}, err
+		if configPath == DEFAULT_CONFIG {
+			fmt.Printf("Creating and loading new default configuration at %v \n", DEFAULT_CONFIG)
+			err := createConfigIfNotExists()
+			if err != nil {
+				panic(fmt.Sprintf("Failed to create a default config at %v", DEFAULT_CONFIG))
+			}
+		} else {
+			panic("Configuration file does not exist")
 		}
 	}
 
-	fileContents, err := os.ReadFile(CONFIG_FILE_NAME)
+	fileContents, err := os.ReadFile(configPath)
 	if err != nil {
 		return SimConfig{}, err
 	}
 
 	var config SimConfig
 	json.Unmarshal(fileContents, &config)
-
+	fmt.Println("Successfully loaded configuration file")
 	return config, nil
 }
 
@@ -437,7 +448,7 @@ func calculateTotalMoneyInSimulation(people []Person, producers []Producer) int 
 
 // Outputs a config with sensible defaults, to be used if the config file does not yet exist
 func createConfigIfNotExists() error {
-	file, err := os.Create(CONFIG_FILE_NAME)
+	file, err := os.Create(DEFAULT_CONFIG)
 	if err != nil {
 		return err
 	}

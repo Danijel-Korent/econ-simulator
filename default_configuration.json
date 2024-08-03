@@ -1,0 +1,89 @@
+{
+	"MaxMonths": 100,
+	"PayoutMonth": 49,
+	"NumPeople": 20,
+	"StartingWalletMin": 0,
+	"StartingWalletMax": 1000,
+	"SavingsRatioMin": 0.1,
+	"SavingsRatioMax": 0.3,
+	"FoodIntakeMin": 30,
+	"FoodIntakeMax": 60,
+	"GasConsumptionPerDistance": 1,
+	"JobSwitchMultiplier": 1.5,
+	"Producers": [
+		{
+			"ProductName": "food",
+			"InitSalary": 10,
+			"MaxHires": 2,
+			"InitBalance": 0,
+			"InitPrice": 10,
+			"InitMonthlyProduction": 100,
+			"InitStock": 1000,
+			"ProductionLimit": 1000,
+			"ProductionChangeAmount": 0.1,
+			"PriceChangeAmount": 0.1,
+			"ProductionCosts": [
+				{
+					"ProducerName": "gasoline",
+					"PerUnits": 10,
+					"Amount": 1
+				},
+				{
+					"ProducerName": "coffee",
+					"PerUnits": 10,
+					"Amount": 1
+				}
+			]
+		},
+		{
+			"ProductName": "gasoline",
+			"InitSalary": 10,
+			"MaxHires": 2,
+			"InitBalance": 0,
+			"InitPrice": 10,
+			"InitMonthlyProduction": 100,
+			"InitStock": 1000,
+			"ProductionLimit": 1000,
+			"ProductionChangeAmount": 0.1,
+			"PriceChangeAmount": 0.1,
+			"ProductionCosts": [
+				{
+					"ProducerName": "gasoline",
+					"PerUnits": 10,
+					"Amount": 1
+				},
+				{
+					"ProducerName": "coffee",
+					"PerUnits": 10,
+					"Amount": 1
+				}
+			]
+		},
+		{
+			"ProductName": "coffee",
+			"InitSalary": 10,
+			"MaxHires": 2,
+			"InitBalance": 0,
+			"InitPrice": 10,
+			"InitMonthlyProduction": 100,
+			"InitStock": 1000,
+			"ProductionLimit": 1000,
+			"ProductionChangeAmount": 0.1,
+			"PriceChangeAmount": 0.1,
+			"ProductionCosts": [
+				{
+					"ProducerName": "gasoline",
+					"PerUnits": 10,
+					"Amount": 1
+				},
+				{
+					"ProducerName": "coffee",
+					"PerUnits": 10,
+					"Amount": 1
+				}
+			]
+		}
+	],
+	"PositionMin": 0,
+	"PositionMax": 300
+}
