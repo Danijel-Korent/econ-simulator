@@ -1,299 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
-	"math"
 	"math/rand"
 	"os"
 	"time"
 )
-
-type ProducerConfig struct {
-	ProductName           string
-	InitSalary            int
-	MaxHires              int
-	InitBalance           int
-	InitPrice             int
-	InitMonthlyProduction int
-	InitStock             int
-	ProductionLimit       int
-
-	//These variables define the amount above or below one that these variables will change. e.g. a value of 0.05 means that increases will be 1.05 and decreases will be 0.95
-	ProductionChangeAmount float64
-	PriceChangeAmount      float64
-
-	ProductionCosts []ProductionCost
-}
-
-type SimConfig struct {
-	//Simulation basics
-	MaxMonths   int
-	PayoutMonth int
-	NumPeople   int
-
-	//Individuals
-	StartingWalletMin         int
-	StartingWalletMax         int
-	SavingsRatioMin           float64
-	SavingsRatioMax           float64
-	FoodIntakeMin             int
-	FoodIntakeMax             int
-	GasConsumptionPerDistance int
-	JobSwitchMultiplier       float64
-
-	//Producers
-	Producers []ProducerConfig
-
-	PositionMin int
-	PositionMax int
-}
-
-type ProductionCost struct {
-	ProducerName string
-	PerUnits     int
-	Amount       int
-}
-
-type Producer struct {
-	BankBalance  int
-	Product      string
-	MonthSalary  int
-	MonthHires   int
-	Employees    []*Person
-	NumEmployees int
-	Price        int
-	Stock        int
-	//Number of units since the producer last bought necessary materials (gas and coffee)
-	UnpaidUnits       int
-	MonthlyProduction int
-	ProductionLimit   int
-	PosX              int
-	PosY              int
-
-	UnitsSold int
-
-	MaxHires               int
-	ProductionChangeAmount float64
-	PriceChangeAmount      float64
-
-	ProductionCosts []ProductionCost
-}
-
-type Person struct {
-	IdNumber          int
-	Employer          int
-	WalletAmount      int
-	Salary            int
-	MonthlyFoodIntake int
-	MonthlyGasIntake  int
-	PosX              int
-	PosY              int
-
-	FoodConsumption   int
-	GasConsumption    int
-	CoffeeConsumption int
-	SavingsRatio      float64
-}
-
-func (p *Person) setWalletAmount(amount int) {
-	if amount < 0 {
-		panic(fmt.Sprintf("Attempted to set wallet amount of person %v to %v", p.IdNumber, amount))
-	}
-
-	p.WalletAmount = amount
-}
-
-// Simulates the purchase of goods, adjusting variables on the person and alerting the producer
-func (p *Person) buyGoods(producers []Producer) {
-	//Savings (temporarily subtracted and then re-added after purchases)
-	savings := int(float64(p.WalletAmount) * p.SavingsRatio)
-	p.setWalletAmount(p.WalletAmount - savings)
-
-	foodProducerIdx := findProducerIdx("food", producers)
-	gasProducerIdx := findProducerIdx("gasoline", producers)
-	coffeeProducerIdx := findProducerIdx("coffee", producers)
-
-	foodUnits := p.getUnitsToPurchase(producers[foodProducerIdx], p.MonthlyFoodIntake)
-	foodCost := producers[foodProducerIdx].registerPurchase(foodUnits)
-	p.setWalletAmount(p.WalletAmount - foodCost)
-	p.FoodConsumption = foodUnits
-
-	gasUnits := p.getUnitsToPurchase(producers[gasProducerIdx], p.MonthlyGasIntake)
-	gasCost := producers[gasProducerIdx].registerPurchase(gasUnits)
-	p.setWalletAmount(p.WalletAmount - gasCost)
-	p.GasConsumption = gasUnits
-
-	if p.WalletAmount > p.MonthlyFoodIntake*producers[foodProducerIdx].Price {
-		foodCost = producers[foodProducerIdx].registerPurchase(p.MonthlyFoodIntake)
-		p.setWalletAmount(p.WalletAmount - foodCost)
-		p.FoodConsumption += p.MonthlyFoodIntake
-	}
-
-	maxCoffee := producers[coffeeProducerIdx].getMaxUnits(p.WalletAmount)
-	coffeeCost := producers[coffeeProducerIdx].registerPurchase(maxCoffee)
-	p.setWalletAmount(p.WalletAmount - coffeeCost)
-	p.CoffeeConsumption = maxCoffee
-
-	p.setWalletAmount(p.WalletAmount + savings)
-}
-
-// Returns either the desired number of units to purchase by the individual or the maximum amount they can purchase with their wallet amount
-func (p *Person) getUnitsToPurchase(producer Producer, desiredIntake int) int {
-	if p.WalletAmount <= 0 {
-		return 0
-	}
-
-	if p.WalletAmount >= producer.Price*desiredIntake {
-		return desiredIntake
-	} else {
-		return producer.getMaxUnits(p.WalletAmount)
-	}
-}
-
-// Look for a new job at a producer if the salary is JOB_SWITCH_MULTIPLIER higher
-func (p *Person) checkNewJobs(producers []Producer, config SimConfig) {
-	for i, producer := range producers {
-		if float64(producer.MonthSalary)/float64(p.Salary) >= config.JobSwitchMultiplier && i != p.Employer {
-			if producers[i].addEmployee(p) {
-				producers[p.Employer].removeEmployee(p)
-				p.Employer = i
-				return
-			}
-		}
-	}
-}
-
-func (p *Person) calculateGasConsumption(producers []Producer, config SimConfig) {
-	employer := producers[p.Employer]
-	p.MonthlyGasIntake = pythagDistance(p.PosX, p.PosY, employer.PosX, employer.PosY) * config.GasConsumptionPerDistance
-}
-
-// Adjusts the price and salary of employees based on the stock
-func (p *Producer) adjustVariables() {
-	newPrice := 0.0
-	newProduction := 0.0
-	if p.Stock == 0 {
-		newProduction = float64(p.MonthlyProduction) * (1.0 + p.ProductionChangeAmount)
-		newPrice = float64(p.Price) * (1.0 + p.PriceChangeAmount)
-	} else {
-		newProduction = float64(p.MonthlyProduction) * (1.0 - p.ProductionChangeAmount)
-		newPrice = float64(p.Price) * (1.0 - p.PriceChangeAmount)
-	}
-	if newProduction > float64(p.ProductionLimit) {
-		newProduction = float64(p.ProductionLimit)
-	}
-
-	p.MonthlyProduction = int(newProduction + 0.5)
-	p.Price = int(newPrice + 0.5)
-}
-
-func (p *Producer) setBankBalance(amount int) {
-	if amount < 0 {
-		panic(fmt.Sprintf("Attempted to set bank balance of producer %v to %v", p.Product, amount))
-	}
-
-	p.BankBalance = amount
-}
-
-// Adds as much product to the producer as they have money to make
-func (p *Producer) produceProducts() {
-	p.Stock += p.MonthlyProduction
-	p.UnpaidUnits += p.MonthlyProduction
-}
-
-func (p *Producer) payProductionCost(producers []Producer) {
-	for _, cost := range p.ProductionCosts {
-		desiredPurchases := int(float64(p.UnpaidUnits) / float64(cost.PerUnits))
-		producerIdx := findProducerIdx(cost.ProducerName, producers)
-		purchasableUnits := producers[producerIdx].getMaxUnits(p.BankBalance)
-		units := desiredPurchases
-		if desiredPurchases > purchasableUnits {
-			units = purchasableUnits
-		}
-
-		purchaseCost := producers[producerIdx].registerPurchase(units)
-		p.setBankBalance(p.BankBalance - purchaseCost)
-		p.UnpaidUnits -= units * cost.PerUnits
-	}
-}
-
-// Removes the given employee from the producer
-func (p *Producer) removeEmployee(person *Person) {
-	for i := range p.Employees {
-		if p.Employees[i].IdNumber == person.IdNumber {
-			p.Employees = append(p.Employees[:i], p.Employees[i+1:]...)
-			p.NumEmployees -= 1
-			return
-		}
-	}
-}
-
-func (p *Producer) payEmployees() {
-	if p.NumEmployees > 0 {
-		p.MonthSalary = p.BankBalance / p.NumEmployees
-	} else {
-		p.MonthSalary = p.BankBalance
-	}
-
-	for i := range p.Employees {
-		p.Employees[i].setWalletAmount(p.Employees[i].WalletAmount + p.MonthSalary)
-		p.Employees[i].Salary = p.MonthSalary
-		p.setBankBalance(p.BankBalance - p.MonthSalary)
-	}
-}
-
-// Checks if a new employee can be hired. Employs them and returns true if so, returns false otherwise.
-func (p *Producer) addEmployee(person *Person) bool {
-	if p.MonthHires < p.MaxHires {
-		p.Employees = append(p.Employees, person)
-		p.NumEmployees += 1
-		p.MonthHires += 1
-		return true
-	}
-
-	return false
-}
-
-// Subtracts from stock, adding to bank balance. Returns the cost of purchase.
-func (p *Producer) registerPurchase(amount int) int {
-	if p.Stock >= amount {
-		p.Stock -= amount
-		p.UnitsSold += amount
-		newBalance := p.BankBalance + (amount * p.Price)
-		p.setBankBalance(newBalance)
-		return amount * p.Price
-	} else {
-		price := p.Stock * p.Price
-		p.UnitsSold += p.Stock
-		p.Stock = 0
-		p.setBankBalance(p.BankBalance + price)
-		return price
-	}
-}
-
-// Returns the maximum number of units one can buy with a certain amount of money
-func (p *Producer) getMaxUnits(money int) int {
-	if money < 0 {
-		return 0
-	}
-	//Cast instead of rounding to truncate (prevents overspends)
-	amount := int(float64(money) / float64(p.Price))
-	if amount > p.Stock {
-		return p.Stock
-	}
-	return amount
-}
-
-func findProducerIdx(name string, producers []Producer) int {
-	for i, p := range producers {
-		if p.Product == name {
-			return i
-		}
-	}
-	return -1
-}
 
 const DEFAULT_CONFIG = "default_configuration.json"
 
@@ -309,6 +22,38 @@ func main() {
 
 	r := rand.New(rand.NewSource(time.Now().UnixMilli()))
 
+	people, producers := initSimulation(config, r)
+
+	detailedMonths := make([]DetailedMonth, config.MaxMonths+1)
+	basicMonths := make([]BasicMonthTable, config.MaxMonths+1)
+	for month := 0; month < config.MaxMonths; month++ {
+		detailedMonths[month] = fillDetailedMonth(people, producers, month)
+		basicMonths[month] = fillBasicMonth(people, producers, month)
+
+		producers, people = simulationStep(producers, people, config)
+
+		if month == config.MaxMonths-1 {
+			exitSimulation(people, producers, basicMonths, detailedMonths, month)
+		}
+	}
+
+	fmt.Println("Simulation exiting")
+}
+
+// Steps through one month of the simulation, adjusting variables as needed
+func simulationStep(producers []Producer, people []Person, config SimConfig) ([]Producer, []Person) {
+	for i := range producers {
+		producers[i].simulationStep(producers)
+	}
+
+	for i := range people {
+		people[i].simulationStep(producers, config)
+	}
+
+	return producers, people
+}
+
+func initSimulation(config SimConfig, r *rand.Rand) ([]Person, []Producer) {
 	producers := make([]Producer, len(config.Producers))
 	for i, pConfig := range config.Producers {
 		producers[i] = initProducer(config, pConfig, r)
@@ -323,211 +68,17 @@ func main() {
 		people = append(people, person)
 	}
 
-	detailedMonths := make([]DetailedMonth, config.MaxMonths+1)
-	basicMonths := make([]BasicMonthTable, config.MaxMonths+1)
-	for month := 0; month < config.MaxMonths; month++ {
-		detailedMonth := fillDetailedMonth(people, producers, month)
-		basicMonth := fillBasicMonth(people, producers, month)
-		detailedMonths[month] = detailedMonth
-		basicMonths[month] = basicMonth
-
-		producers, people = simulationStep(producers, people, month, config)
-
-		if month == config.MaxMonths-1 {
-			detailedMonth := fillDetailedMonth(people, producers, month)
-			basicMonth := fillBasicMonth(people, producers, month)
-			detailedMonths[month+1] = detailedMonth
-			basicMonths[month+1] = basicMonth
-
-			printSimulationState(basicMonths)
-
-			err := outputSimulationHTML(basicMonths, detailedMonths)
-			if err != nil {
-				fmt.Fprintln(os.Stderr, err)
-			}
-		}
-	}
-
-	fmt.Println("Simulation exiting")
+	return people, producers
 }
 
-func loadConfig(configPath string) (SimConfig, error) {
-	fmt.Printf("Attempting to load %v \n", configPath)
-	_, err := os.Open(configPath)
-	if os.IsNotExist(err) {
-		if configPath == DEFAULT_CONFIG {
-			fmt.Printf("Creating and loading new default configuration at %v \n", DEFAULT_CONFIG)
-			err := createConfigIfNotExists()
-			if err != nil {
-				panic(fmt.Sprintf("Failed to create a default config at %v", DEFAULT_CONFIG))
-			}
-		} else {
-			panic("Configuration file does not exist")
-		}
-	}
+func exitSimulation(people []Person, producers []Producer, basicMonths []BasicMonthTable, detailedMonths []DetailedMonth, month int) {
+	detailedMonths[month+1] = fillDetailedMonth(people, producers, month)
+	basicMonths[month+1] = fillBasicMonth(people, producers, month)
+	printSimulationState(basicMonths)
 
-	fileContents, err := os.ReadFile(configPath)
+	err := outputSimulationHTML(basicMonths, detailedMonths)
 	if err != nil {
-		return SimConfig{}, err
+		fmt.Fprintln(os.Stderr, err)
 	}
 
-	var config SimConfig
-	json.Unmarshal(fileContents, &config)
-	fmt.Println("Successfully loaded configuration file")
-	return config, nil
-}
-
-// Steps through one month of the simulation, adjusting variables as needed
-func simulationStep(producers []Producer, people []Person, month int, config SimConfig) ([]Producer, []Person) {
-	for i := range producers {
-		producers[i].UnitsSold = 0
-		producers[i].MonthHires = 0
-		producers[i].adjustVariables()
-		producers[i].payProductionCost(producers)
-		producers[i].payEmployees()
-		producers[i].produceProducts()
-	}
-
-	for i := range people {
-		people[i].checkNewJobs(producers, config)
-		people[i].calculateGasConsumption(producers, config)
-		people[i].buyGoods(producers)
-
-		//if month == config.PayoutMonth {
-		//	people[i].WalletAmount *= 2
-		//}
-	}
-
-	return producers, people
-}
-
-// Initialises a new producer and returns it
-func initProducer(config SimConfig, pConfig ProducerConfig, r *rand.Rand) Producer {
-
-	return Producer{BankBalance: pConfig.InitBalance, Product: pConfig.ProductName, Price: pConfig.InitPrice, MaxHires: pConfig.MaxHires, Stock: pConfig.InitStock, MonthSalary: pConfig.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: pConfig.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r), ProductionChangeAmount: pConfig.ProductionChangeAmount, PriceChangeAmount: pConfig.PriceChangeAmount, ProductionCosts: pConfig.ProductionCosts, UnpaidUnits: 0, ProductionLimit: pConfig.ProductionLimit}
-}
-
-// Creates a new person, generating random variables. Returns the person and the producer they are employed by
-func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
-	randomEmployer := randIntInRange(0, len(config.Producers), r)
-
-	return Person{
-		IdNumber:          ID,
-		Employer:          randomEmployer,
-		WalletAmount:      randIntInRange(config.StartingWalletMin, config.StartingWalletMax, r),
-		SavingsRatio:      randFloatInRange(config.SavingsRatioMin, config.SavingsRatioMax, r),
-		Salary:            0,
-		MonthlyFoodIntake: randIntInRange(config.FoodIntakeMin, config.FoodIntakeMax, r),
-		PosX:              randIntInRange(config.PositionMin, config.PositionMax, r),
-		PosY:              randIntInRange(config.PositionMin, config.PositionMax, r),
-	}
-}
-
-// Generates a random integer between min and max
-func randIntInRange(min int, max int, r *rand.Rand) int {
-	return r.Intn(max-min) + min
-}
-
-// Generates a random float between min and max
-func randFloatInRange(min float64, max float64, r *rand.Rand) float64 {
-	return min + r.Float64()*(max-min)
-}
-
-// Debug function for testing how money enters the simulation
-func calculateTotalMoneyInSimulation(people []Person, producers []Producer) int {
-	total := 0
-	for _, p := range people {
-		total += p.WalletAmount
-	}
-	for _, p := range producers {
-		total += p.BankBalance
-	}
-
-	return total
-}
-
-// Outputs a config with sensible defaults, to be used if the config file does not yet exist
-func createConfigIfNotExists() error {
-	file, err := os.Create(DEFAULT_CONFIG)
-	if err != nil {
-		return err
-	}
-
-	defer file.Close()
-
-	defaultProducers := []ProducerConfig{
-		{
-			ProductName:           "food",
-			InitSalary:            10,
-			MaxHires:              2,
-			InitBalance:           0,
-			InitPrice:             10,
-			InitMonthlyProduction: 100,
-			InitStock:             1000,
-			ProductionLimit:       1000,
-
-			ProductionChangeAmount: 0.1,
-			PriceChangeAmount:      0.1,
-
-			ProductionCosts: []ProductionCost{{ProducerName: "gasoline", PerUnits: 10, Amount: 1}, {ProducerName: "coffee", PerUnits: 10, Amount: 1}},
-		},
-		{
-			ProductName:           "gasoline",
-			InitSalary:            10,
-			MaxHires:              2,
-			InitBalance:           0,
-			InitPrice:             10,
-			InitMonthlyProduction: 100,
-			InitStock:             1000,
-			ProductionLimit:       1000,
-
-			ProductionChangeAmount: 0.1,
-			PriceChangeAmount:      0.1,
-
-			ProductionCosts: []ProductionCost{{ProducerName: "gasoline", PerUnits: 10, Amount: 1}, {ProducerName: "coffee", PerUnits: 10, Amount: 1}},
-		},
-		{
-			ProductName:           "coffee",
-			InitSalary:            10,
-			MaxHires:              2,
-			InitBalance:           0,
-			InitPrice:             10,
-			InitMonthlyProduction: 100,
-			InitStock:             1000,
-			ProductionLimit:       1000,
-
-			ProductionChangeAmount: 0.1,
-			PriceChangeAmount:      0.1,
-
-			ProductionCosts: []ProductionCost{{ProducerName: "gasoline", PerUnits: 10, Amount: 1}, {ProducerName: "coffee", PerUnits: 10, Amount: 1}},
-		},
-	}
-
-	exampleConfig := SimConfig{
-		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000, Producers: defaultProducers, SavingsRatioMin: 0.1, SavingsRatioMax: 0.3,
-	}
-
-	bytes, err := json.MarshalIndent(exampleConfig, "", "\t")
-	if err != nil {
-		return err
-	}
-
-	_, err = file.Write(bytes)
-	if err != nil {
-		return err
-	}
-
-	err = file.Sync()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Calculates the straight line distance between two points
-func pythagDistance(x1 int, y1 int, x2 int, y2 int) int {
-	distanceX := math.Abs(float64(x2 - x1))
-	distanceY := math.Abs(float64(y2 - y1))
-	return int(math.Sqrt(math.Pow(distanceX, 2) + math.Pow(distanceY, 2)))
 }

@@ -1,5 +1,7 @@
 package main
 
+//This code implements the output logic for both command line and HTML
+
 import (
 	"fmt"
 	"html/template"
@@ -85,27 +87,15 @@ func printSimulationState(tables []BasicMonthTable) {
 	}
 }
 
-// Debug function for verifying HTML output is working correctly
-func printDetailedMonth(months []DetailedMonth) {
-	for _, m := range months {
-		fmt.Printf("Month %v \n", m.Month)
-		fmt.Println("-------------")
-		for _, p := range m.Producers {
-			printProducer(p)
-		}
-
+// Calculates the total amount of money in the simulation
+func calculateTotalMoneyInSimulation(people []Person, producers []Producer) int {
+	total := 0
+	for _, p := range people {
+		total += p.WalletAmount
+	}
+	for _, p := range producers {
+		total += p.BankBalance
 	}
 
-}
-
-func printProducer(p Producer) {
-	fmt.Printf("Bank balance: %v \n", p.BankBalance)
-	fmt.Printf("Product: %v \n", p.Product)
-	fmt.Printf("MonthSalary: %v \n", p.MonthSalary)
-	fmt.Printf("MonthHires: %v \n", p.MonthHires)
-	fmt.Printf("NumEmployees: %v \n", p.NumEmployees)
-	fmt.Printf("Price: %v \n", p.Price)
-	fmt.Printf("Stock: %v \n", p.Stock)
-	fmt.Printf("MonthlyProduction: %v \n", p.MonthlyProduction)
-	fmt.Println("")
+	return total
 }
