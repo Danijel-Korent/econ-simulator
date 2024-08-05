@@ -46,7 +46,7 @@ func (p *Producer) simulationStep(producers []Producer) {
 	p.adjustVariables()
 	p.produceProducts()
 	p.payProductionCost(producers)
-	p.payEmployees()
+	p.calculateSalary()
 }
 
 func (p *Producer) setBankBalance(amount int) {
@@ -89,18 +89,14 @@ func (p *Producer) removeEmployee(person *Person) {
 	}
 }
 
-func (p *Producer) payEmployees() {
+func (p *Producer) calculateSalary() {
 	if len(p.Employees) > 0 {
 		p.MonthSalary = p.BankBalance / len(p.Employees)
 	} else {
 		p.MonthSalary = p.BankBalance
 	}
 
-	for i := range p.Employees {
-		p.Employees[i].setWalletAmount(p.Employees[i].WalletAmount + p.MonthSalary)
-		p.Employees[i].Salary = p.MonthSalary
-		p.setBankBalance(p.BankBalance - p.MonthSalary)
-	}
+	fmt.Printf("Salary of %v (total cost: %v) with %v employees and %v bank balance \n", p.MonthSalary, p.MonthSalary*len(p.Employees), len(p.Employees), p.BankBalance)
 }
 
 // Checks if a new employee can be hired. Employs them and returns true if so, returns false otherwise.

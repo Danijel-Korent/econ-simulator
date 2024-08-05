@@ -39,9 +39,9 @@ func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 
 func (p *Person) simulationStep(producers []Producer, config SimConfig) {
 	p.checkNewJobs(producers, config)
+	p.receiveSalary(producers)
 	p.calculateGasConsumption(producers, config)
 	p.buyGoods(producers)
-
 }
 
 func (p *Person) setWalletAmount(amount int) {
@@ -110,6 +110,12 @@ func (p *Person) checkNewJobs(producers []Producer, config SimConfig) {
 			}
 		}
 	}
+}
+
+func (p *Person) receiveSalary(producers []Producer) {
+	p.Salary = producers[p.Employer].MonthSalary
+	p.setWalletAmount(p.WalletAmount + p.Salary)
+	producers[p.Employer].setBankBalance(producers[p.Employer].BankBalance - p.Salary)
 }
 
 func (p *Person) calculateGasConsumption(producers []Producer, config SimConfig) {

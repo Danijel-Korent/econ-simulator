@@ -1,7 +1,7 @@
 {
 	"MaxMonths": 100,
 	"PayoutMonth": 49,
-	"NumPeople": 20,
+	"NumPeople": 3,
 	"StartingWalletMin": 0,
 	"StartingWalletMax": 1000,
 	"SavingsRatioMin": 0.1,
