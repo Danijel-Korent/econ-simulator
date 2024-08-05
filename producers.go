@@ -45,9 +45,9 @@ func (p *Producer) simulationStep(producers []Producer) {
 	p.UnitsSold = 0
 	p.MonthHires = 0
 	p.adjustVariables()
+	p.produceProducts()
 	p.payProductionCost(producers)
 	p.payEmployees()
-	p.produceProducts()
 }
 
 func (p *Producer) setBankBalance(amount int) {

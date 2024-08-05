@@ -79,7 +79,7 @@ func (p *Person) buyGoods(producers []Producer) {
 
 // Purchases a good from a producer - according to the desired intake or maximum possible
 func (p *Person) buyGood(producer Producer, intake int) int {
-	foodUnits := p.getUnitsToPurchase(producer, p.MonthlyFoodIntake)
+	foodUnits := p.getUnitsToPurchase(producer, intake)
 	foodCost := producer.registerPurchase(foodUnits)
 	p.setWalletAmount(p.WalletAmount - foodCost)
 	return foodUnits
