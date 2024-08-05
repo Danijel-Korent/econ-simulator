@@ -62,7 +62,6 @@ func initSimulation(config SimConfig, r *rand.Rand) ([]Person, []Producer) {
 	for i := 0; i < config.NumPeople; i++ {
 		person := initPerson(r, i, config)
 
-		producers[person.Employer].NumEmployees += 1
 		producers[person.Employer].Employees = append(producers[person.Employer].Employees, &person)
 		people = append(people, person)
 	}

@@ -12,14 +12,13 @@ type ProductionCost struct {
 }
 
 type Producer struct {
-	BankBalance  int
-	Product      string
-	MonthSalary  int
-	MonthHires   int
-	Employees    []*Person
-	NumEmployees int
-	Price        int
-	Stock        int
+	BankBalance int
+	Product     string
+	MonthSalary int
+	MonthHires  int
+	Employees   []*Person
+	Price       int
+	Stock       int
 	//Number of units since the producer last bought necessary materials (gas and coffee)
 	UnpaidUnits       int
 	MonthlyProduction int
@@ -38,7 +37,7 @@ type Producer struct {
 
 // Initialises a new producer and returns it
 func initProducer(config SimConfig, pConfig ProducerConfig, r *rand.Rand) Producer {
-	return Producer{BankBalance: pConfig.InitBalance, Product: pConfig.ProductName, Price: pConfig.InitPrice, MaxHires: pConfig.MaxHires, Stock: pConfig.InitStock, MonthSalary: pConfig.InitSalary, Employees: []*Person{}, NumEmployees: 0, MonthlyProduction: pConfig.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r), ProductionChangeAmount: pConfig.ProductionChangeAmount, PriceChangeAmount: pConfig.PriceChangeAmount, ProductionCosts: pConfig.ProductionCosts, UnpaidUnits: 0, ProductionLimit: pConfig.ProductionLimit}
+	return Producer{BankBalance: pConfig.InitBalance, Product: pConfig.ProductName, Price: pConfig.InitPrice, MaxHires: pConfig.MaxHires, Stock: pConfig.InitStock, MonthSalary: pConfig.InitSalary, Employees: []*Person{}, MonthlyProduction: pConfig.InitMonthlyProduction, PosX: randIntInRange(config.PositionMin, config.PositionMax, r), PosY: randIntInRange(config.PositionMin, config.PositionMax, r), ProductionChangeAmount: pConfig.ProductionChangeAmount, PriceChangeAmount: pConfig.PriceChangeAmount, ProductionCosts: pConfig.ProductionCosts, UnpaidUnits: 0, ProductionLimit: pConfig.ProductionLimit}
 }
 
 func (p *Producer) simulationStep(producers []Producer) {
@@ -85,15 +84,14 @@ func (p *Producer) removeEmployee(person *Person) {
 	for i := range p.Employees {
 		if p.Employees[i].IdNumber == person.IdNumber {
 			p.Employees = append(p.Employees[:i], p.Employees[i+1:]...)
-			p.NumEmployees -= 1
 			return
 		}
 	}
 }
 
 func (p *Producer) payEmployees() {
-	if p.NumEmployees > 0 {
-		p.MonthSalary = p.BankBalance / p.NumEmployees
+	if len(p.Employees) > 0 {
+		p.MonthSalary = p.BankBalance / len(p.Employees)
 	} else {
 		p.MonthSalary = p.BankBalance
 	}
@@ -109,7 +107,6 @@ func (p *Producer) payEmployees() {
 func (p *Producer) addEmployee(person *Person) bool {
 	if p.MonthHires < p.MaxHires {
 		p.Employees = append(p.Employees, person)
-		p.NumEmployees += 1
 		p.MonthHires += 1
 		return true
 	}
