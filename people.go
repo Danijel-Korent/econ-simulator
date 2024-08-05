@@ -62,11 +62,11 @@ func (p *Person) buyGoods(producers []Producer) {
 	gasProducerIdx := findProducerIdx("gasoline", producers)
 	coffeeProducerIdx := findProducerIdx("coffee", producers)
 
-	p.FoodConsumption = p.buyGood(producers[foodProducerIdx], p.MonthlyFoodIntake)
-	p.GasConsumption = p.buyGood(producers[gasProducerIdx], p.MonthlyFoodIntake)
+	p.FoodConsumption = p.buyGood(&producers[foodProducerIdx], p.MonthlyFoodIntake)
+	p.GasConsumption = p.buyGood(&producers[gasProducerIdx], p.MonthlyFoodIntake)
 
 	if p.WalletAmount > p.MonthlyFoodIntake*producers[foodProducerIdx].Price {
-		p.FoodConsumption += p.buyGood(producers[foodProducerIdx], p.MonthlyFoodIntake)
+		p.FoodConsumption += p.buyGood(&producers[foodProducerIdx], p.MonthlyFoodIntake)
 	}
 
 	maxCoffee := producers[coffeeProducerIdx].getMaxUnits(p.WalletAmount)
@@ -78,8 +78,8 @@ func (p *Person) buyGoods(producers []Producer) {
 }
 
 // Purchases a good from a producer - according to the desired intake or maximum possible
-func (p *Person) buyGood(producer Producer, intake int) int {
-	foodUnits := p.getUnitsToPurchase(producer, intake)
+func (p *Person) buyGood(producer *Producer, intake int) int {
+	foodUnits := p.getUnitsToPurchase(*producer, intake)
 	foodCost := producer.registerPurchase(foodUnits)
 	p.setWalletAmount(p.WalletAmount - foodCost)
 	return foodUnits
