@@ -38,7 +38,6 @@ func initPerson(r *rand.Rand, ID int, config SimConfig) Person {
 }
 
 func (p *Person) simulationStep(producers []Producer, config SimConfig) {
-	p.checkNewJobs(producers, config)
 	p.receiveSalary(producers)
 	p.calculateGasConsumption(producers, config)
 	p.buyGoods(producers)

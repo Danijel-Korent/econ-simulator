@@ -41,6 +41,12 @@ func main() {
 
 // Steps through one month of the simulation, adjusting variables as needed
 func simulationStep(producers []Producer, people []Person, config SimConfig) ([]Producer, []Person) {
+	//People have to switch jobs before the producers go through their step
+	//Otherwise the salary calculations will be more than the producers can pay
+	for i := range people {
+		people[i].checkNewJobs(producers, config)
+	}
+
 	for i := range producers {
 		producers[i].simulationStep(producers)
 	}

@@ -95,8 +95,6 @@ func (p *Producer) calculateSalary() {
 	} else {
 		p.MonthSalary = p.BankBalance
 	}
-
-	fmt.Printf("Salary of %v (total cost: %v) with %v employees and %v bank balance \n", p.MonthSalary, p.MonthSalary*len(p.Employees), len(p.Employees), p.BankBalance)
 }
 
 // Checks if a new employee can be hired. Employs them and returns true if so, returns false otherwise.
