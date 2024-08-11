@@ -69,6 +69,13 @@ func loadConfig(configPath string) (SimConfig, error) {
 
 	var config SimConfig
 	json.Unmarshal(fileContents, &config)
+
+	valid, msg := verifyConfig(config)
+	if !valid {
+		fmt.Fprintln(os.Stderr, msg)
+		os.Exit(1)
+	}
+
 	fmt.Println("Successfully loaded configuration file")
 	return config, nil
 }
@@ -156,4 +163,15 @@ func getDefaultConfig() SimConfig {
 		MaxMonths: 100, PayoutMonth: 49, NumPeople: 20, FoodIntakeMin: 30, FoodIntakeMax: 60, JobSwitchMultiplier: 1.5, PositionMin: 0, PositionMax: 300, GasConsumptionPerDistance: 1, StartingWalletMin: 0, StartingWalletMax: 1000, Producers: defaultProducers, SavingsRatioMin: 0.1, SavingsRatioMax: 0.3,
 	}
 	return exampleConfig
+}
+
+// Function to verify if a configuration file is valid or not (will cause crashes or won't)
+func verifyConfig(config SimConfig) (bool, string) {
+	for _, p := range config.Producers {
+		if p.InitSalary > p.InitBalance {
+			return false, fmt.Sprintf("Producer %v has a greater initial salary than balance", p.ProductName)
+		}
+	}
+
+	return true, ""
 }
